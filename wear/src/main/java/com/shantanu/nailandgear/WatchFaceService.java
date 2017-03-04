@@ -42,6 +42,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         Bitmap hourHandScaled;
         Bitmap background;
         Paint hourMinutePaint;
+        Paint nailGearPaint;
 
 
         final Handler mUpdateTimeHandler = new Handler() {
@@ -69,7 +70,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
             /* initialize your watch face */
-            hourHand = BitmapFactory.decodeResource(getResources(), R.drawable.nailgear);
+            hourHand = BitmapFactory.decodeResource(getResources(), R.drawable.nailgearambient);
             background = BitmapFactory.decodeResource(getResources(),R.drawable.black);
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(WatchFaceService.this)
@@ -79,6 +80,8 @@ public class WatchFaceService extends CanvasWatchFaceService{
                     .build());
 
             date = new Date();
+            hourMinutePaint = new Paint();
+            nailGearPaint = new Paint();
         }
 
         @Override
@@ -125,8 +128,9 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
 
 
-            canvas.drawBitmap(background,0,0,null);
+            canvas.drawBitmap(background,0,0,nailGearPaint);
             canvas.rotate((float) ((date.getHours()%12)*30 + date.getMinutes()*0.5),centerX,centerY);
+            //canvas.rotate(90,centerX,centerY);
             canvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),null);
 
 
