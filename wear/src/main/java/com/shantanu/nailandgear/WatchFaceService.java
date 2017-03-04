@@ -3,6 +3,7 @@ package com.shantanu.nailandgear;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -10,11 +11,16 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
+import android.text.TextPaint;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
 import java.io.Console;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+
+import static android.support.wearable.watchface.WatchFaceStyle.PEEK_MODE_SHORT;
 
 /**
  * Created by modak on 2/3/2017.
@@ -41,9 +47,10 @@ public class WatchFaceService extends CanvasWatchFaceService{
         Bitmap hourHand;
         Bitmap hourHandScaled;
         Bitmap background;
-        Paint hourMinutePaint;
+        TextPaint hourMinutePaint;
         Paint nailGearPaint;
-
+        Paint minuteHandPaint;
+        Paint hourMarkerPaint;
 
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
@@ -77,10 +84,15 @@ public class WatchFaceService extends CanvasWatchFaceService{
                     .setBackgroundVisibility(WatchFaceStyle
                             .BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false)
+                    .setCardPeekMode(PEEK_MODE_SHORT)
                     .build());
 
             date = new Date();
-            hourMinutePaint = new Paint();
+            hourMinutePaint = new TextPaint();
+            hourMinutePaint.setColor(Color.WHITE);
+
+            minuteHandPaint = new Paint();
+            minuteHandPaint.setColor(Color.WHITE);
             nailGearPaint = new Paint();
         }
 
@@ -123,17 +135,43 @@ public class WatchFaceService extends CanvasWatchFaceService{
             float centerX = width / 2f;
             float centerY = height / 2f;
 
-            float scale = (height/(1.50f*hourHand.getHeight()));
+            hourMinutePaint.setTextSize(width/7);
+
+            float scale = (height/(1.40f*hourHand.getHeight()));
             hourHandScaled = Bitmap.createScaledBitmap(hourHand, (int) (hourHand.getWidth()*scale),(int) (hourHand.getHeight()*scale),false);
 
-
-
             canvas.drawBitmap(background,0,0,nailGearPaint);
-            canvas.rotate((float) ((date.getHours()%12)*30 + date.getMinutes()*0.5),centerX,centerY);
+
+            drawHourMarkers(canvas,height,width);
+
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.rotate((float) ((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
             //canvas.rotate(90,centerX,centerY);
-            canvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),null);
+
+            canvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),nailGearPaint);
+            canvas.restore();
+
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.rotate(date.getMinutes()*6,centerX,centerY);
+            canvas.drawRect(width*0.49f,height*0.15f,width*0.51f,height*0.5f,minuteHandPaint);
+            canvas.restore();
+
+            hourMinutePaint.setTextAlign(Paint.Align.CENTER);
+            SimpleDateFormat sdf = new SimpleDateFormat("HHmm", Locale.ENGLISH);
+
+            String time = sdf.format(date);
+            canvas.drawText(time,centerX,height*0.05f+getCharHeight(),hourMinutePaint);
+        }
 
 
+        float getCharHeight(){
+
+            Rect bounds= new Rect();
+            hourMinutePaint.getTextBounds("5",0,1,bounds);
+            return bounds.height();
+        }
+
+        void drawHourMarkers(Canvas canvas,int height,int width){
 
 
 
