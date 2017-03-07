@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.Locale;
 
 import static android.support.wearable.watchface.WatchFaceStyle.PEEK_MODE_SHORT;
+import static android.support.wearable.watchface.WatchFaceStyle.PROTECT_STATUS_BAR;
 
 /**
  * Created by modak on 2/3/2017.
@@ -45,6 +46,9 @@ public class WatchFaceService extends CanvasWatchFaceService{
         boolean mLowBitAmbient;
         boolean mBurnInProtection;
         boolean isRound;
+        boolean showTime;
+        boolean showDay;
+        boolean showBattery;
         Bitmap hourHand;
         Bitmap hourHandInteractive;
         Bitmap hourHandAmbient;
@@ -54,6 +58,8 @@ public class WatchFaceService extends CanvasWatchFaceService{
         Paint minuteHandPaint;
         Paint hourMarkerPaint;
         Paint black;
+        Paint mainHourMarkerPaint;
+        Color accent;
 
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
@@ -80,7 +86,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
             /* initialize your watch face */
-            hourHand = BitmapFactory.decodeResource(getResources(),R.drawable.nailgearambient);
+            hourHand = BitmapFactory.decodeResource(getResources(),R.drawable.nailgear);
             hourHandInteractive = BitmapFactory.decodeResource(getResources(), R.drawable.nailgear);
             hourHandAmbient = BitmapFactory.decodeResource(getResources(),R.drawable.nailgearambient);
 
@@ -89,21 +95,30 @@ public class WatchFaceService extends CanvasWatchFaceService{
                             .BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false)
                     .setCardPeekMode(PEEK_MODE_SHORT)
+                    .setViewProtectionMode(PROTECT_STATUS_BAR)
                     .build());
 
             date = new Date();
             hourMinutePaint = new TextPaint();
-            hourMinutePaint.setColor(Color.GREEN);
+            hourMinutePaint.setColor(Color.WHITE);
 
             minuteHandPaint = new Paint();
-            minuteHandPaint.setColor(Color.WHITE);
+            minuteHandPaint.setColor(Color.MAGENTA);
+
 
             hourMinutePaint.setAntiAlias(false);
 
             black = new Paint();
             black.setColor(Color.BLACK);
             hourMarkerPaint = new Paint();
+            hourMarkerPaint.setColor(Color.WHITE);
+            mainHourMarkerPaint = new Paint();
+            mainHourMarkerPaint.setColor(Color.MAGENTA);
             nailGearPaint = new Paint();
+
+            accent = new Color();
+
+            showTime = true;
         }
 
         @Override
@@ -139,6 +154,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onDraw(Canvas canvas, Rect bounds) {
             /* draw your watch face */
             date.setTime(System.currentTimeMillis());
+
 
             int width = bounds.width();
             int height = bounds.height();
@@ -182,7 +198,10 @@ public class WatchFaceService extends CanvasWatchFaceService{
             Canvas tempCanvas = new Canvas(tempBitmap);
 
             Bitmap textBitmap =Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
-            Canvas textCanvas = new Canvas(textBitmap);
+            Canvas textCanvas;
+
+            textCanvas = new Canvas(textBitmap);
+
             tempCanvas.drawRect(0,0,width,height,black);
 
 
@@ -201,27 +220,36 @@ public class WatchFaceService extends CanvasWatchFaceService{
             tempCanvas.rotate(-date.getMinutes()*6,centerX,centerY);
 
             drawHourMarkers(tempCanvas,height,width);
+            if(showTime) {
+                hourMinutePaint.setTextAlign(Paint.Align.CENTER);
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
 
-            hourMinutePaint.setTextAlign(Paint.Align.CENTER);
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
 
-            String time = sdf.format(date);
-            Rect timeCoords = getTextBounds(time);
-            timeCoords.offsetTo((centerX-timeCoords.width()/2),(centerY-timeCoords.height()/2));
+                String time = sdf.format(date);
+                Rect timeCoords = getTextBounds(time);
+                timeCoords.offsetTo((centerX - timeCoords.width() / 2), (centerY - timeCoords.height() / 2));
 
-            textCanvas.drawRect(0,0,width,height,black);
-            textCanvas.drawText(time,centerX,centerY+getTextBounds(time).height()/2,hourMinutePaint);
 
-            for(int i=timeCoords.left;i<timeCoords.right;i++){
-                for(int j=timeCoords.top;j<timeCoords.bottom;j++){
-                    if(textBitmap.getPixel(i,j)!=Color.BLACK&&tempBitmap.getPixel(i,j)!=Color.BLACK){
-                        tempBitmap.setPixel(i,j,Color.BLACK);
-                    }else if(textBitmap.getPixel(i,j)!=Color.BLACK&&tempBitmap.getPixel(i,j)==Color.BLACK){
-                        tempBitmap.setPixel(i,j,Color.WHITE);
+                textCanvas.drawRect(0, 0, width, height, black);
+
+                textCanvas.drawText(time, centerX, centerY + getTextBounds(time).height() / 2, hourMinutePaint);
+
+
+                for (int i = timeCoords.left-1; i <= timeCoords.right; i++) {
+                    for (int j = timeCoords.top-1; j <= timeCoords.bottom; j++) {
+                        if (textBitmap.getPixel(i, j) != Color.BLACK && tempBitmap.getPixel(i, j) != Color.BLACK) { //To alternate white pixels only if not in ambient
+                            if(isInAmbientMode()) {
+                                if ((i + j) % 2 == 0)
+                                    tempBitmap.setPixel(i, j, textBitmap.getPixel(i, j) );
+                            }else{
+                                tempBitmap.setPixel(i, j, Color.BLACK) ;
+                            }
+                        } else if (textBitmap.getPixel(i, j) != Color.BLACK && tempBitmap.getPixel(i, j) == Color.BLACK) {
+                            tempBitmap.setPixel(i, j, textBitmap.getPixel(i,j));
+                        }
                     }
                 }
             }
-
             canvas.drawBitmap(tempBitmap,0,0,null);
         }
 
@@ -238,11 +266,9 @@ public class WatchFaceService extends CanvasWatchFaceService{
             for(int i=0;i<4;i++){
                 Log.i("te",String.valueOf(!this.getPeekCardPosition().contains(centreX,(int)(height*0.9))));
                 if(!cardPresent||i!=2||isRound) {
-                    hourMarkerPaint.setColor(Color.YELLOW);
-                    canvas.drawCircle(centreX, height * hscale, height * 0.02f, hourMarkerPaint);
+                    canvas.drawCircle(centreX, height * hscale, height * 0.02f, mainHourMarkerPaint);
                 }
                 canvas.rotate(30,centreX,centreY);
-                hourMarkerPaint.setColor(Color.WHITE);
                 canvas.drawCircle(centreX,height*hscale,height*0.02f,hourMarkerPaint);
                 canvas.rotate(30,centreX,centreY);
                 canvas.drawCircle(centreX,height*hscale,height*0.02f,hourMarkerPaint);

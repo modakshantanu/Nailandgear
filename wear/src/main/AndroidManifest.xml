@@ -11,24 +11,24 @@
     ...
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/preview_square"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
         <service
             android:name=".WatchFaceService"
-            android:label="Watch Face"
+            android:label="Nail and Gear"
             android:permission="android.permission.BIND_WALLPAPER" >
             <meta-data
                 android:name="android.service.wallpaper"
                 android:resource="@xml/watch_face" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview"
-                android:resource="@drawable/nailgear" />
+                android:resource="@drawable/preview_square" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview_circular"
-                android:resource="@drawable/nailgear" />
+                android:resource="@drawable/preview_circular" />
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
                 <category
