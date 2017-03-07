@@ -14,6 +14,7 @@ import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.SurfaceHolder;
+import android.view.WindowInsets;
 
 import java.io.Console;
 import java.text.SimpleDateFormat;
@@ -43,14 +44,16 @@ public class WatchFaceService extends CanvasWatchFaceService{
         Date date;
         boolean mLowBitAmbient;
         boolean mBurnInProtection;
-
+        boolean isRound;
         Bitmap hourHand;
+        Bitmap hourHandInteractive;
+        Bitmap hourHandAmbient;
         Bitmap hourHandScaled;
-        Bitmap background;
         TextPaint hourMinutePaint;
         Paint nailGearPaint;
         Paint minuteHandPaint;
         Paint hourMarkerPaint;
+        Paint black;
 
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
@@ -77,8 +80,9 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
             /* initialize your watch face */
-            hourHand = BitmapFactory.decodeResource(getResources(), R.drawable.nailgearambient);
-            background = BitmapFactory.decodeResource(getResources(),R.drawable.black);
+            hourHand = BitmapFactory.decodeResource(getResources(),R.drawable.nailgearambient);
+            hourHandInteractive = BitmapFactory.decodeResource(getResources(), R.drawable.nailgear);
+            hourHandAmbient = BitmapFactory.decodeResource(getResources(),R.drawable.nailgearambient);
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(WatchFaceService.this)
                     .setBackgroundVisibility(WatchFaceStyle
@@ -89,10 +93,16 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             date = new Date();
             hourMinutePaint = new TextPaint();
-            hourMinutePaint.setColor(Color.WHITE);
+            hourMinutePaint.setColor(Color.GREEN);
 
             minuteHandPaint = new Paint();
             minuteHandPaint.setColor(Color.WHITE);
+
+            hourMinutePaint.setAntiAlias(false);
+
+            black = new Paint();
+            black.setColor(Color.BLACK);
+            hourMarkerPaint = new Paint();
             nailGearPaint = new Paint();
         }
 
@@ -116,9 +126,10 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onAmbientModeChanged(boolean inAmbientMode) {
             super.onAmbientModeChanged(inAmbientMode);
             /* the wearable switched between modes */
-            if(mLowBitAmbient){
-                boolean antiAlias = !inAmbientMode;
-                hourMinutePaint.setAntiAlias(antiAlias);
+            if(inAmbientMode){
+                hourHand = hourHandAmbient;
+            }else{
+                hourHand = hourHandInteractive;
             }
             invalidate();
             updateTimer();
@@ -131,52 +142,116 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             int width = bounds.width();
             int height = bounds.height();
-
+            
             float centerX = width / 2f;
             float centerY = height / 2f;
+            float hhScale = 1.3f;
+            if(isRound)
+                hhScale = 1.25f;
 
             hourMinutePaint.setTextSize(width/7);
 
-            float scale = (height/(1.40f*hourHand.getHeight()));
+            float scale = (height/(hhScale*hourHand.getHeight()));
             hourHandScaled = Bitmap.createScaledBitmap(hourHand, (int) (hourHand.getWidth()*scale),(int) (hourHand.getHeight()*scale),false);
 
-            canvas.drawBitmap(background,0,0,nailGearPaint);
-
-            drawHourMarkers(canvas,height,width);
-
-            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-            canvas.rotate((float) ((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
-            //canvas.rotate(90,centerX,centerY);
-
-            canvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),nailGearPaint);
-            canvas.restore();
-
-            canvas.save(Canvas.MATRIX_SAVE_FLAG);
-            canvas.rotate(date.getMinutes()*6,centerX,centerY);
-            canvas.drawRect(width*0.49f,height*0.15f,width*0.51f,height*0.5f,minuteHandPaint);
-            canvas.restore();
-
-            hourMinutePaint.setTextAlign(Paint.Align.CENTER);
-            SimpleDateFormat sdf = new SimpleDateFormat("HHmm", Locale.ENGLISH);
-
-            String time = sdf.format(date);
-            canvas.drawText(time,centerX,height*0.05f+getCharHeight(),hourMinutePaint);
+            drawHandsAndText(canvas,height,width);
         }
 
 
-        float getCharHeight(){
+        Rect getTextBounds(String text){
 
             Rect bounds= new Rect();
-            hourMinutePaint.getTextBounds("5",0,1,bounds);
-            return bounds.height();
+            hourMinutePaint.getTextBounds(text,0,text.length(),bounds);
+            return bounds;
         }
+
+
+        @Override
+        public void onApplyWindowInsets(WindowInsets insets) {
+            super.onApplyWindowInsets(insets);
+            isRound = insets.isRound();
+        }
+
+        void drawHandsAndText(Canvas canvas,int height,int width){
+
+
+            int centerX = width/2;
+            int centerY = height/2;
+
+            Bitmap tempBitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+            Canvas tempCanvas = new Canvas(tempBitmap);
+
+            Bitmap textBitmap =Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+            Canvas textCanvas = new Canvas(textBitmap);
+            tempCanvas.drawRect(0,0,width,height,black);
+
+
+            tempCanvas.rotate((float) ((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
+            tempCanvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),nailGearPaint);
+            tempCanvas.rotate((float) -((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
+
+
+
+            float mhscale = 0.15f;
+            if(isRound)
+                mhscale = 0.1f;
+
+            tempCanvas.rotate(date.getMinutes()*6,centerX,centerY);
+            tempCanvas.drawRect(width*0.49f,height*mhscale,width*0.51f,height*0.5f,minuteHandPaint);
+            tempCanvas.rotate(-date.getMinutes()*6,centerX,centerY);
+
+            drawHourMarkers(tempCanvas,height,width);
+
+            hourMinutePaint.setTextAlign(Paint.Align.CENTER);
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
+
+            String time = sdf.format(date);
+            Rect timeCoords = getTextBounds(time);
+            timeCoords.offsetTo((centerX-timeCoords.width()/2),(centerY-timeCoords.height()/2));
+
+            textCanvas.drawRect(0,0,width,height,black);
+            textCanvas.drawText(time,centerX,centerY+getTextBounds(time).height()/2,hourMinutePaint);
+
+            for(int i=timeCoords.left;i<timeCoords.right;i++){
+                for(int j=timeCoords.top;j<timeCoords.bottom;j++){
+                    if(textBitmap.getPixel(i,j)!=Color.BLACK&&tempBitmap.getPixel(i,j)!=Color.BLACK){
+                        tempBitmap.setPixel(i,j,Color.BLACK);
+                    }else if(textBitmap.getPixel(i,j)!=Color.BLACK&&tempBitmap.getPixel(i,j)==Color.BLACK){
+                        tempBitmap.setPixel(i,j,Color.WHITE);
+                    }
+                }
+            }
+
+            canvas.drawBitmap(tempBitmap,0,0,null);
+        }
+
 
         void drawHourMarkers(Canvas canvas,int height,int width){
 
+            float hscale = 0.09f;
+            if(isRound)
+                hscale = 0.07f;
 
+            int centreX=width/2;
+            int centreY=height/2;
+            boolean cardPresent = !this.getPeekCardPosition().isEmpty();
+            for(int i=0;i<4;i++){
+                Log.i("te",String.valueOf(!this.getPeekCardPosition().contains(centreX,(int)(height*0.9))));
+                if(!cardPresent||i!=2||isRound) {
+                    hourMarkerPaint.setColor(Color.YELLOW);
+                    canvas.drawCircle(centreX, height * hscale, height * 0.02f, hourMarkerPaint);
+                }
+                canvas.rotate(30,centreX,centreY);
+                hourMarkerPaint.setColor(Color.WHITE);
+                canvas.drawCircle(centreX,height*hscale,height*0.02f,hourMarkerPaint);
+                canvas.rotate(30,centreX,centreY);
+                canvas.drawCircle(centreX,height*hscale,height*0.02f,hourMarkerPaint);
+                canvas.rotate(30,centreX,centreY);
+            }
 
 
         }
+
 
         @Override
         public void onVisibilityChanged(boolean visible) {
