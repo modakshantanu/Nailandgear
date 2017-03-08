@@ -1,11 +1,14 @@
 package com.shantanu.nailandgear;
 
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -43,9 +46,12 @@ public class WatchFaceService extends CanvasWatchFaceService{
         static final int INTERACTIVE_UPDATE_RATE_MS = 1000;//1 second update but its not really used
 
         //These are usd to draw properly on circular and square displays
-        float HH_SCALE;//hour hand(nail and gear
-        float MH_SCALE;//minute hand
-        float HM_SCALE;//Dots scale
+        float HH_SCALE;//hour hand(nail and gear Inversely
+        float MH_SCALE;//minute hand y-coord of top
+        float HM_SCALE;//Dots scale y coord of centre
+        float DAY_POS;//Position of date y coord of text
+        float DATE_POS;//y-coord of date
+        float BAT_POS;//y coord of battery
 
         Date date;   //Calendar not available in Api 21
 
@@ -67,13 +73,15 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
         //Various paints
         TextPaint hourMinutePaint;
+        TextPaint dayDatePaint;
         Paint nailGearPaint;
         Paint minuteHandPaint;
         Paint hourMarkerPaint;
         Paint black;
         Paint mainHourMarkerPaint;
+        Paint batteryPaint;
 
-        Color accent;
+        int accent;//This is int because low bit mode uses int for colour
 
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
@@ -112,13 +120,24 @@ public class WatchFaceService extends CanvasWatchFaceService{
             //Just initialising variables
             date = new Date();
 
+            accent = Color.YELLOW;
+
             hourMinutePaint = new TextPaint();
             hourMinutePaint.setColor(Color.WHITE);
             hourMinutePaint.setTextAlign(Paint.Align.CENTER);
             hourMinutePaint.setAntiAlias(false);//hourminutepaint antialias is permanently false to stop it from looking bold
 
+            dayDatePaint = new TextPaint();
+            dayDatePaint.setColor(Color.WHITE);
+            dayDatePaint.setTextAlign(Paint.Align.CENTER);
+            dayDatePaint.setAntiAlias(false);
+
             minuteHandPaint = new Paint();
-            minuteHandPaint.setColor(Color.RED);
+            minuteHandPaint.setColor(accent);
+
+            batteryPaint = new Paint();
+            batteryPaint.setColor(Color.WHITE);
+            batteryPaint.setTextAlign(Paint.Align.CENTER);
 
             black = new Paint();
             black.setColor(Color.BLACK);
@@ -127,13 +146,13 @@ public class WatchFaceService extends CanvasWatchFaceService{
             hourMarkerPaint.setColor(Color.WHITE);
 
             mainHourMarkerPaint = new Paint();
-            mainHourMarkerPaint.setColor(Color.RED);
+            mainHourMarkerPaint.setColor(accent);
 
             nailGearPaint = new Paint();
 
-            accent = new Color();
-
             showTime = true;
+            showDay = true;
+            showBattery = true;
         }
 
         @Override
@@ -173,14 +192,16 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             int width = bounds.width();
             int height = bounds.height();
-            
+
             float centerX = width / 2f;
             float centerY = height / 2f;
 
+            //These are magic numbers
             hourMinutePaint.setTextSize(width/7);
+            dayDatePaint.setTextSize(width/16);
+            batteryPaint.setTextSize(width/16);
 
             float scale = (height/(HH_SCALE*hourHand.getHeight()));
-            // TODO: 8/3/2017 Stop bitmap from loading each time
             hourHandScaled = Bitmap.createScaledBitmap(hourHand, (int) (hourHand.getWidth()*scale),(int) (hourHand.getHeight()*scale),false);
 
             drawHandsAndText(canvas,height,width);
@@ -193,18 +214,25 @@ public class WatchFaceService extends CanvasWatchFaceService{
             return bounds;
         }
 
+        //Sets scales for circular and square displays
         @Override
         public void onApplyWindowInsets(WindowInsets insets) {
             super.onApplyWindowInsets(insets);
             isRound = insets.isRound();
             if(isRound){
-                HH_SCALE = 1.25f;
-                MH_SCALE = 0.1f;
-                HM_SCALE = 0.07f;
+                HH_SCALE = 1.27f;//Inversely
+                MH_SCALE = 0.12f;//y-coord of top of minute hand
+                HM_SCALE = 0.07f;//y-coord of circle
+                DAY_POS = 0.35f;//y-coord of text
+                DATE_POS = 0.60f;
+                BAT_POS = 0.60f;
             }else{
-                HH_SCALE = 1.3f;
-                MH_SCALE = 0.15f;
-                HM_SCALE = 0.09f;
+                HH_SCALE = 1.27f;
+                MH_SCALE = 0.12f;
+                HM_SCALE = 0.07f;
+                DAY_POS = 0.38f;
+
+                BAT_POS = 0.60f;
             }
         }
 
@@ -222,22 +250,25 @@ public class WatchFaceService extends CanvasWatchFaceService{
             tempCanvas.drawRect(0,0,width,height,black);//Make it black
 
             //Draw hour hand
-            tempCanvas.rotate((float) ((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
+            tempCanvas.rotate (hourHandAngle(),centerX,centerY);
             tempCanvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),nailGearPaint);
-            tempCanvas.rotate((float) -((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
+            tempCanvas.rotate(-hourHandAngle(),centerX,centerY);
 
             //Draw minute hand
-            tempCanvas.rotate(date.getMinutes()*6,centerX,centerY);
+            tempCanvas.rotate(minuteHandAngle(),centerX,centerY);
             tempCanvas.drawRect(width*0.49f,height*MH_SCALE,width*0.51f,height*0.5f,minuteHandPaint);
-            tempCanvas.rotate(-date.getMinutes()*6,centerX,centerY);
+            tempCanvas.rotate(-minuteHandAngle(),centerX,centerY);
 
             drawHourMarkers(tempCanvas,height,width);
 
-            //If time is needed to be shown
-            if(showTime) {
+            if(showBattery){
 
+            }
+
+            //If time needs to be shown
+            if(showTime) {
                 //Get string representation of time
-                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
+                SimpleDateFormat sdf = new SimpleDateFormat("HH  mm", Locale.ENGLISH);
                 String time = sdf.format(date);
 
                 //Get rect for bounds of time
@@ -247,25 +278,58 @@ public class WatchFaceService extends CanvasWatchFaceService{
                 textCanvas.drawRect(0, 0, width, height, black);
                 textCanvas.drawText(time, centerX, centerY + getTextBounds(time).height() / 2, hourMinutePaint);
 
-                //To blend two bitmaps. Only processes pixels in the text bounds
-                for (int i = timeCoords.left-1; i <= timeCoords.right; i++) {
-                    for (int j = timeCoords.top-1; j <= timeCoords.bottom; j++) {
-                        if (textBitmap.getPixel(i, j) != Color.BLACK && tempBitmap.getPixel(i, j) != Color.BLACK) { //To alternate white pixels only if not in ambient
-                            if(isInAmbientMode()) {
-                                if ((i + j) % 2 == 0)
-                                    tempBitmap.setPixel(i, j, textBitmap.getPixel(i, j) );
-                            }else{
-                                tempBitmap.setPixel(i, j, Color.BLACK) ;
-                            }
-                        } else if (textBitmap.getPixel(i, j) != Color.BLACK && tempBitmap.getPixel(i, j) == Color.BLACK) {
-                            tempBitmap.setPixel(i, j, textBitmap.getPixel(i,j));
-                        }
-                    }
-                }
+                blendBitmaps(tempBitmap,textBitmap,timeCoords);
+            }
+            if(showDay){
+
+                SimpleDateFormat sdf = new SimpleDateFormat("EEE d MMM",Locale.ENGLISH);
+                String day = sdf.format(date);
+
+                Rect dayCoords = getTextBounds(day);
+                dayCoords.offsetTo((centerX - dayCoords.width() / 2), (int) (width*DAY_POS- dayCoords.height() / 2));
+
+                textCanvas.drawRect(0, 0, width, height, black);
+                textCanvas.drawText(day, centerX, width*DAY_POS + getTextBounds(day).height() / 2, dayDatePaint);
+
+                blendBitmaps(tempBitmap,textBitmap,dayCoords);
+            }
+            if(showBattery){
+
+                int battery = getBatteryPercentage();
+                String batStr = String.valueOf(battery)+"%";
+
+                Rect batCoords = getTextBounds(batStr);
+                batCoords.offsetTo((centerX - batCoords.width() / 2), (int) (width*BAT_POS- batCoords.height() / 2));
+
+                textCanvas.drawRect(0, 0, width, height, black);
+                textCanvas.drawText(batStr, centerX, width*BAT_POS + getTextBounds(batStr).height() / 2, batteryPaint);
+
+                blendBitmaps(tempBitmap,textBitmap,batCoords);
             }
 
             //draw temp bitmap onto the original canvas
             canvas.drawBitmap(tempBitmap,0,0,null);
+        }
+
+        void blendBitmaps(Bitmap base,Bitmap layer,Rect coords){
+
+            //To blend two bitmaps. Only processes pixels in the text bounds
+            for (int i = coords.left-1; i <= coords.right; i++) {
+                for (int j = coords.top-1; j <= coords.bottom; j++) {
+                    if (layer.getPixel(i, j) != Color.BLACK && base.getPixel(i, j) != Color.BLACK) { //To alternate white pixels only if not in ambient
+                        if(isInAmbientMode()) {
+                            if ((i + j) % 2 == 0)
+                                base.setPixel(i, j, layer.getPixel(i, j));
+                            else
+                                base.setPixel(i, j, Color.BLACK);
+                        }else{
+                            base.setPixel(i, j, Color.BLACK);
+                        }
+                    } else if (layer.getPixel(i, j) != Color.BLACK && base.getPixel(i, j) == Color.BLACK) {
+                        base.setPixel(i, j, layer.getPixel(i,j));
+                    }
+                }
+            }
         }
 
         void drawHourMarkers(Canvas canvas,int height,int width){
@@ -309,6 +373,22 @@ public class WatchFaceService extends CanvasWatchFaceService{
             if (shouldTimerBeRunning()) {
                 mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME);
             }
+        }
+
+        float hourHandAngle(){
+            return  (date.getHours()%12)*30+ date.getMinutes()*0.5f;
+        }
+        float minuteHandAngle(){
+            return date.getMinutes()*6;
+        }
+
+        int getBatteryPercentage()
+        {
+            IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent batteryStatus =  registerReceiver(null, iFilter);
+
+            return batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+
         }
     }
 }
