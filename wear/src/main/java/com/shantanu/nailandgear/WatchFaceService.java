@@ -40,25 +40,39 @@ public class WatchFaceService extends CanvasWatchFaceService{
     /* implement service callback methods */
     private class Engine extends CanvasWatchFaceService.Engine {
         static final int MSG_UPDATE_TIME = 0;
-        static final int INTERACTIVE_UPDATE_RATE_MS = 1000;
+        static final int INTERACTIVE_UPDATE_RATE_MS = 1000;//1 second update but its not really used
 
-        Date date;
+        //These are usd to draw properly on circular and square displays
+        float HH_SCALE;//hour hand(nail and gear
+        float MH_SCALE;//minute hand
+        float HM_SCALE;//Dots scale
+
+        Date date;   //Calendar not available in Api 21
+
+        //Device properties
         boolean mLowBitAmbient;
         boolean mBurnInProtection;
         boolean isRound;
+
+        //Settings
         boolean showTime;
         boolean showDay;
         boolean showBattery;
+
+        //hourHand holds the current bitmap
         Bitmap hourHand;
         Bitmap hourHandInteractive;
         Bitmap hourHandAmbient;
         Bitmap hourHandScaled;
+
+        //Various paints
         TextPaint hourMinutePaint;
         Paint nailGearPaint;
         Paint minuteHandPaint;
         Paint hourMarkerPaint;
         Paint black;
         Paint mainHourMarkerPaint;
+
         Color accent;
 
         final Handler mUpdateTimeHandler = new Handler() {
@@ -79,9 +93,6 @@ public class WatchFaceService extends CanvasWatchFaceService{
             }
         };
 
-
-
-
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
@@ -98,22 +109,26 @@ public class WatchFaceService extends CanvasWatchFaceService{
                     .setViewProtectionMode(PROTECT_STATUS_BAR)
                     .build());
 
+            //Just initialising variables
             date = new Date();
+
             hourMinutePaint = new TextPaint();
             hourMinutePaint.setColor(Color.WHITE);
+            hourMinutePaint.setTextAlign(Paint.Align.CENTER);
+            hourMinutePaint.setAntiAlias(false);//hourminutepaint antialias is permanently false to stop it from looking bold
 
             minuteHandPaint = new Paint();
-            minuteHandPaint.setColor(Color.MAGENTA);
-
-
-            hourMinutePaint.setAntiAlias(false);
+            minuteHandPaint.setColor(Color.RED);
 
             black = new Paint();
             black.setColor(Color.BLACK);
+
             hourMarkerPaint = new Paint();
             hourMarkerPaint.setColor(Color.WHITE);
+
             mainHourMarkerPaint = new Paint();
-            mainHourMarkerPaint.setColor(Color.MAGENTA);
+            mainHourMarkerPaint.setColor(Color.RED);
+
             nailGearPaint = new Paint();
 
             accent = new Color();
@@ -134,20 +149,21 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onTimeTick() {
             super.onTimeTick();
             /* the time changed */
-            invalidate();
+            invalidate();//invalidate calls onDraw()
         }
 
         @Override
         public void onAmbientModeChanged(boolean inAmbientMode) {
             super.onAmbientModeChanged(inAmbientMode);
             /* the wearable switched between modes */
+            //Switches the bitmap between two preloaded bitmaps
             if(inAmbientMode){
                 hourHand = hourHandAmbient;
             }else{
                 hourHand = hourHandInteractive;
             }
             invalidate();
-            updateTimer();
+            updateTimer();//If ambient is on timer is turned off, else, it is turned on
         }
 
         @Override
@@ -155,24 +171,20 @@ public class WatchFaceService extends CanvasWatchFaceService{
             /* draw your watch face */
             date.setTime(System.currentTimeMillis());
 
-
             int width = bounds.width();
             int height = bounds.height();
             
             float centerX = width / 2f;
             float centerY = height / 2f;
-            float hhScale = 1.3f;
-            if(isRound)
-                hhScale = 1.25f;
 
             hourMinutePaint.setTextSize(width/7);
 
-            float scale = (height/(hhScale*hourHand.getHeight()));
+            float scale = (height/(HH_SCALE*hourHand.getHeight()));
+            // TODO: 8/3/2017 Stop bitmap from loading each time
             hourHandScaled = Bitmap.createScaledBitmap(hourHand, (int) (hourHand.getWidth()*scale),(int) (hourHand.getHeight()*scale),false);
 
             drawHandsAndText(canvas,height,width);
         }
-
 
         Rect getTextBounds(String text){
 
@@ -181,60 +193,61 @@ public class WatchFaceService extends CanvasWatchFaceService{
             return bounds;
         }
 
-
         @Override
         public void onApplyWindowInsets(WindowInsets insets) {
             super.onApplyWindowInsets(insets);
             isRound = insets.isRound();
+            if(isRound){
+                HH_SCALE = 1.25f;
+                MH_SCALE = 0.1f;
+                HM_SCALE = 0.07f;
+            }else{
+                HH_SCALE = 1.3f;
+                MH_SCALE = 0.15f;
+                HM_SCALE = 0.09f;
+            }
         }
 
         void drawHandsAndText(Canvas canvas,int height,int width){
 
-
             int centerX = width/2;
             int centerY = height/2;
 
-            Bitmap tempBitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+            Bitmap tempBitmap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);//Bitmap to hold hands
             Canvas tempCanvas = new Canvas(tempBitmap);
 
-            Bitmap textBitmap =Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
-            Canvas textCanvas;
+            Bitmap textBitmap =Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);//Bitmap to hold Text
+            Canvas textCanvas = new Canvas(textBitmap);
 
-            textCanvas = new Canvas(textBitmap);
+            tempCanvas.drawRect(0,0,width,height,black);//Make it black
 
-            tempCanvas.drawRect(0,0,width,height,black);
-
-
+            //Draw hour hand
             tempCanvas.rotate((float) ((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
             tempCanvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),nailGearPaint);
             tempCanvas.rotate((float) -((date.getHours()%12)*30+ date.getMinutes()*0.5),centerX,centerY);
 
-
-
-            float mhscale = 0.15f;
-            if(isRound)
-                mhscale = 0.1f;
-
+            //Draw minute hand
             tempCanvas.rotate(date.getMinutes()*6,centerX,centerY);
-            tempCanvas.drawRect(width*0.49f,height*mhscale,width*0.51f,height*0.5f,minuteHandPaint);
+            tempCanvas.drawRect(width*0.49f,height*MH_SCALE,width*0.51f,height*0.5f,minuteHandPaint);
             tempCanvas.rotate(-date.getMinutes()*6,centerX,centerY);
 
             drawHourMarkers(tempCanvas,height,width);
+
+            //If time is needed to be shown
             if(showTime) {
-                hourMinutePaint.setTextAlign(Paint.Align.CENTER);
+
+                //Get string representation of time
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.ENGLISH);
-
-
                 String time = sdf.format(date);
+
+                //Get rect for bounds of time
                 Rect timeCoords = getTextBounds(time);
                 timeCoords.offsetTo((centerX - timeCoords.width() / 2), (centerY - timeCoords.height() / 2));
 
-
                 textCanvas.drawRect(0, 0, width, height, black);
-
                 textCanvas.drawText(time, centerX, centerY + getTextBounds(time).height() / 2, hourMinutePaint);
 
-
+                //To blend two bitmaps. Only processes pixels in the text bounds
                 for (int i = timeCoords.left-1; i <= timeCoords.right; i++) {
                     for (int j = timeCoords.top-1; j <= timeCoords.bottom; j++) {
                         if (textBitmap.getPixel(i, j) != Color.BLACK && tempBitmap.getPixel(i, j) != Color.BLACK) { //To alternate white pixels only if not in ambient
@@ -250,34 +263,30 @@ public class WatchFaceService extends CanvasWatchFaceService{
                     }
                 }
             }
+
+            //draw temp bitmap onto the original canvas
             canvas.drawBitmap(tempBitmap,0,0,null);
         }
 
-
         void drawHourMarkers(Canvas canvas,int height,int width){
-
-            float hscale = 0.09f;
-            if(isRound)
-                hscale = 0.07f;
 
             int centreX=width/2;
             int centreY=height/2;
+
             boolean cardPresent = !this.getPeekCardPosition().isEmpty();
+
+            //draw 12 hour markers
             for(int i=0;i<4;i++){
-                Log.i("te",String.valueOf(!this.getPeekCardPosition().contains(centreX,(int)(height*0.9))));
-                if(!cardPresent||i!=2||isRound) {
-                    canvas.drawCircle(centreX, height * hscale, height * 0.02f, mainHourMarkerPaint);
+                if(!cardPresent||i!=2||isRound) {//Dont draw the second main marker if card present and is square
+                    canvas.drawCircle(centreX, height * HM_SCALE, height * 0.02f, mainHourMarkerPaint);
                 }
                 canvas.rotate(30,centreX,centreY);
-                canvas.drawCircle(centreX,height*hscale,height*0.02f,hourMarkerPaint);
+                canvas.drawCircle(centreX,height*HM_SCALE,height*0.02f,hourMarkerPaint);
                 canvas.rotate(30,centreX,centreY);
-                canvas.drawCircle(centreX,height*hscale,height*0.02f,hourMarkerPaint);
+                canvas.drawCircle(centreX,height*HM_SCALE,height*0.02f,hourMarkerPaint);
                 canvas.rotate(30,centreX,centreY);
             }
-
-
         }
-
 
         @Override
         public void onVisibilityChanged(boolean visible) {
@@ -290,6 +299,8 @@ public class WatchFaceService extends CanvasWatchFaceService{
             updateTimer();
 
         }
+
+        //Starts/stops custom timer
         private boolean shouldTimerBeRunning() {
             return isVisible() && !isInAmbientMode();
         }
