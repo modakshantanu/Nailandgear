@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Nailandgear</string>
+    <string name="accent_color">Accent Color</string>
+    <string name="pick_accent_color">Pick Accent Color</string>
 </resources>

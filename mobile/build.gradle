@@ -27,5 +27,6 @@ dependencies {
     wearApp project(':wear')
     compile 'com.google.android.gms:play-services:10.2.0'
     compile 'com.android.support:appcompat-v7:25.2.0'
+    compile 'com.android.support.constraint:constraint-layout:+'
     testCompile 'junit:junit:4.12'
 }

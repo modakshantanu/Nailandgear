@@ -12,12 +12,27 @@ import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.service.carrier.CarrierMessagingService;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.TextPaint;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataItemBuffer;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
 
 import java.io.Console;
 import java.text.SimpleDateFormat;
@@ -41,7 +56,12 @@ public class WatchFaceService extends CanvasWatchFaceService{
     }
 
     /* implement service callback methods */
-    private class Engine extends CanvasWatchFaceService.Engine {
+    private class Engine extends CanvasWatchFaceService.Engine implements GoogleApiClient.ConnectionCallbacks,
+    GoogleApiClient.OnConnectionFailedListener{
+        private GoogleApiClient googleApiClient;
+
+        private String TAG="Watch Face";
+
         static final int MSG_UPDATE_TIME = 0;
         static final int INTERACTIVE_UPDATE_RATE_MS = 1000;//1 second update but its not really used
 
@@ -81,7 +101,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         Paint mainHourMarkerPaint;
         Paint batteryPaint;
 
-        int accent;//This is int because low bit mode uses int for colour
+        int accent = Color.WHITE;//This is int because low bit mode uses int for colour
 
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
@@ -104,6 +124,13 @@ public class WatchFaceService extends CanvasWatchFaceService{
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
+
+            googleApiClient = new GoogleApiClient.Builder(WatchFaceService.this)
+                    .addApi(Wearable.API)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .build();
+
             /* initialize your watch face */
             hourHand = BitmapFactory.decodeResource(getResources(),R.drawable.nailgear);
             hourHandInteractive = BitmapFactory.decodeResource(getResources(), R.drawable.nailgear);
@@ -119,8 +146,6 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             //Just initialising variables
             date = new Date();
-
-            accent = Color.YELLOW;
 
             hourMinutePaint = new TextPaint();
             hourMinutePaint.setColor(Color.WHITE);
@@ -150,9 +175,9 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             nailGearPaint = new Paint();
 
-            showTime = true;
-            showDay = true;
-            showBattery = true;
+            showTime = false;
+            showDay = false;
+            showBattery = false;
         }
 
         @Override
@@ -261,9 +286,6 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             drawHourMarkers(tempCanvas,height,width);
 
-            if(showBattery){
-
-            }
 
             //If time needs to be shown
             if(showTime) {
@@ -357,11 +379,21 @@ public class WatchFaceService extends CanvasWatchFaceService{
             super.onVisibilityChanged(visible);
             /* the watch face became visible or invisible */
 
-
+            if (visible) {
+                googleApiClient.connect();
+            } else {
+                releaseGoogleApiClient();
+            }
             // Whether the timer should be running depends on whether we're visible and
             // whether we're in ambient mode, so we may need to start or stop the timer
             updateTimer();
 
+        }
+        private void releaseGoogleApiClient() {
+            if (googleApiClient != null && googleApiClient.isConnected()) {
+                Wearable.DataApi.removeListener(googleApiClient, onDataChangedListener);
+                googleApiClient.disconnect();
+            }
         }
 
         //Starts/stops custom timer
@@ -388,7 +420,69 @@ public class WatchFaceService extends CanvasWatchFaceService{
             Intent batteryStatus =  registerReceiver(null, iFilter);
 
             return batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-
         }
+
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Log.d(TAG, "connected GoogleAPI");
+            Wearable.DataApi.addListener(googleApiClient, onDataChangedListener);
+            Wearable.DataApi.getDataItems(googleApiClient).setResultCallback(onConnectedResultCallback);
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+            Log.e(TAG, "suspended GoogleAPI");
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            Log.e(TAG, "connectionFailed GoogleAPI");
+        }
+        @Override
+        public void onDestroy() {
+            releaseGoogleApiClient();
+            super.onDestroy();
+        }
+
+        private final DataApi.DataListener onDataChangedListener = new DataApi.DataListener() {
+            @Override
+            public void onDataChanged(DataEventBuffer dataEvents) {
+                for (DataEvent event : dataEvents) {
+                    if (event.getType() == DataEvent.TYPE_CHANGED) {
+                        DataItem item = event.getDataItem();
+                        processConfigurationFor(item);
+                    }
+                }
+
+                dataEvents.release();
+                invalidate();
+            }
+        };
+
+        private void processConfigurationFor(DataItem item) {
+            if ("/nail_and_gear_config".equals(item.getUri().getPath())) {
+                DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
+                if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
+
+
+                    String accentColor = dataMap.getString("KEY_ACCENT_COLOR");
+                    accent=Color.parseColor(accentColor);
+                    mainHourMarkerPaint.setColor(accent);
+                    minuteHandPaint.setColor(accent);
+                }
+            }
+        }
+
+        private final ResultCallback<DataItemBuffer> onConnectedResultCallback = new ResultCallback<DataItemBuffer>() {
+            @Override
+            public void onResult(DataItemBuffer dataItems) {
+                for (DataItem item : dataItems) {
+                    processConfigurationFor(item);
+                }
+
+                dataItems.release();
+                invalidate();
+            }
+        };
     }
 }
