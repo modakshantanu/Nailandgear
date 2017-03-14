@@ -28,29 +28,31 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import java.util.List;
+
 import static android.R.attr.color;
 import static android.R.attr.tag;
 
 public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        CompoundButton.OnCheckedChangeListener{
+        AdapterView.OnItemSelectedListener{
 
 
     //Tags used for logging
     private static final String TAG_ACCENT_COLOR_CHOOSER = "accent_chooser";
     private static final String TAG = "WatchFace";
 
-    private Spinner colorChooserSpinner;
-
-    Switch dateInt;
-    Switch battInt;
-    Switch dateAmb;
-    Switch battAmb;
+    Spinner colorChooserSpinner;
+    Spinner date;
+    Spinner batt;
+    Spinner hands;
+    Spinner timeformat;
+    Spinner time;
 
     private GoogleApiClient googleApiClient;//For wear communication
 
-    String[] colors;
+    String[] colors,ambIntMatrix,handsMat,timeFormats;
 
     boolean justOpened = true;
 
@@ -59,8 +61,11 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_watch_face_configuration);
 
+        //Storing XML resources as easily accessible arrays
         colors = this.getResources().getStringArray(R.array.colors_array);
-
+        ambIntMatrix = this.getResources().getStringArray(R.array.amb_int_matrix);
+        handsMat = this.getResources().getStringArray(R.array.hands_display);
+        timeFormats = this.getResources().getStringArray(R.array.time_formats);
 
         googleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
@@ -69,35 +74,54 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 .build();
 
         colorChooserSpinner = (Spinner) findViewById(R.id.accent_color_chooser);
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+        ArrayAdapter<CharSequence> colorAdapter = ArrayAdapter.createFromResource(this,
                 R.array.colors_array, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        colorChooserSpinner.setAdapter(adapter);
-        colorChooserSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        colorChooserSpinner.setAdapter(colorAdapter);
+        colorChooserSpinner.setSelection(6);
+        colorChooserSpinner.setOnItemSelectedListener(this);
 
-                if(justOpened)
-                    return;
-                PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
+        date = (Spinner) findViewById(R.id.day_date_chooser);
+        ArrayAdapter<CharSequence> dateAdapter = ArrayAdapter.createFromResource(this,
+                R.array.amb_int_matrix, android.R.layout.simple_spinner_item);
+        dateAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        date.setAdapter(dateAdapter);
+        date.setSelection(3);
+        date.setOnItemSelectedListener(this);
 
-                String color = colors[position];
-                putDataMapRequest.getDataMap().putString("KEY_ACCENT_COLOR",color);
-                Log.d(TAG,"color changed to "+color);
+        timeformat = (Spinner) findViewById(R.id.time_format_chooser);
+        ArrayAdapter<CharSequence> timeFormatAdapter = ArrayAdapter.createFromResource(this,
+                R.array.time_formats, android.R.layout.simple_spinner_item);
+        timeFormatAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        timeformat.setAdapter(timeFormatAdapter);
+        timeformat.setSelection(0);
+        timeformat.setOnItemSelectedListener(this);
 
-                PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
-                Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
-            }
+        batt = (Spinner) findViewById(R.id.battery_chooser);
+        ArrayAdapter<CharSequence> battAdapter = ArrayAdapter.createFromResource(this,
+                R.array.amb_int_matrix, android.R.layout.simple_spinner_item);
+        battAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        batt.setAdapter(battAdapter);
+        batt.setSelection(2);
+        batt.setOnItemSelectedListener(this);
 
-        });
+        hands = (Spinner) findViewById(R.id.hands_chooser);
+        ArrayAdapter<CharSequence> handsAdapter = ArrayAdapter.createFromResource(this,
+                R.array.hands_display, android.R.layout.simple_spinner_item);
+        handsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        hands.setAdapter(handsAdapter);
+        hands.setSelection(2);
+        hands.setOnItemSelectedListener(this);
 
-        dateInt = (Switch) findViewById(R.id.date_ambient);
-        dateInt.setOnCheckedChangeListener();
+        time = (Spinner) findViewById(R.id.time_chooser);
+        ArrayAdapter<CharSequence> timeAdapter = ArrayAdapter.createFromResource(this,
+                R.array.amb_int_matrix, android.R.layout.simple_spinner_item);
+        timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        time.setAdapter(timeAdapter);
+        time.setSelection(3);
+        time.setOnItemSelectedListener(this);
 
     }
-
-
-
 
 
     @Override
@@ -179,22 +203,104 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     private void processConfigurationFor(DataItem item) {
         if ("/nail_and_gear_config".equals(item.getUri().getPath())) {
             DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();//A map of data (key-value pairs), is inside DataItem
-            if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
 
-                String accentColor = dataMap.getString("KEY_ACCENT_COLOR");//Get the color string
+            if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
+                String s = dataMap.getString("KEY_ACCENT_COLOR");//Get the color string
                 int index = 0;
                 for(int i=0;i<colors.length;i++){
-                    Log.d(TAG,colors[i]+" "+accentColor);
-                    if(accentColor.equalsIgnoreCase(colors[i]))
+                    if(s.equalsIgnoreCase(colors[i]))
                         index=i;
                 }
                 colorChooserSpinner.setSelection(index);
+            }if (dataMap.containsKey("KEY_TIME_FORMAT")) {
+                String s = dataMap.getString("KEY_TIME_FORMAT");
+                int index = 0;
+                for(int i=0;i<timeFormats.length;i++){
+                    if(s.equalsIgnoreCase(timeFormats[i]))
+                        index=i;
+                }
+                timeformat.setSelection(index);
+            }if (dataMap.containsKey("KEY_HANDS")) {
+                String s = dataMap.getString("KEY_HANDS");
+                int index = 0;
+                for (int i = 0; i < handsMat.length; i++) {
+                    if (s.equalsIgnoreCase(handsMat[i]))
+                        index = i;
+                }
+                hands.setSelection(index);
+            }if (dataMap.containsKey("KEY_SHOW_DATE")) {
+
+                String s = dataMap.getString("KEY_SHOW_DATE");
+                int index = 0;
+                for (int i = 0; i < ambIntMatrix.length; i++) {
+                    if (s.equalsIgnoreCase(ambIntMatrix[i]))
+                        index = i;
+                }
+                date.setSelection(index);
+            }if (dataMap.containsKey("KEY_SHOW_BATTERY")) {
+
+                String s = dataMap.getString("KEY_SHOW_BATTERY");
+                int index = 0;
+                for (int i = 0; i < ambIntMatrix.length; i++) {
+                    if (s.equalsIgnoreCase(ambIntMatrix[i]))
+                        index = i;
+                }
+                batt.setSelection(index);
+            }if (dataMap.containsKey("KEY_SHOW_TIME")) {
+
+                String s = dataMap.getString("KEY_SHOW_TIME");
+                int index = 0;
+                for (int i = 0; i < ambIntMatrix.length; i++) {
+                    if (s.equalsIgnoreCase(ambIntMatrix[i]))
+                        index = i;
+                }
+                time.setSelection(index);
             }
         }
     }
 
+
     @Override
-    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        
+    public void onItemSelected(AdapterView<?> view, View child, int position, long id) {
+        if(justOpened)
+            return;
+        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
+
+        String s;
+
+        switch (view.getId()){
+            case R.id.accent_color_chooser:
+                s = colors[position];
+                putDataMapRequest.getDataMap().putString("KEY_ACCENT_COLOR",s);
+                break;
+            case R.id.time_format_chooser:
+                s = timeFormats[position];
+                putDataMapRequest.getDataMap().putString("KEY_TIME_FORMAT",s);
+                break;
+            case R.id.hands_chooser:
+                s= handsMat[position];
+                putDataMapRequest.getDataMap().putString("KEY_HANDS",s);
+                break;
+            case R.id.day_date_chooser:
+                s = ambIntMatrix[position];
+                putDataMapRequest.getDataMap().putString("KEY_SHOW_DATE",s);
+                break;
+            case R.id.battery_chooser:
+                s = ambIntMatrix[position];
+                putDataMapRequest.getDataMap().putString("KEY_SHOW_BATTERY",s);
+                break;
+            case R.id.time_chooser:
+                s = ambIntMatrix[position];
+                putDataMapRequest.getDataMap().putString("KEY_SHOW_TIME",s);
+                break;
+        }
+
+        PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
+        Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
     }
 }

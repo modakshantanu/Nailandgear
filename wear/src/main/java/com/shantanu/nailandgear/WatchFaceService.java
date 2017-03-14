@@ -94,7 +94,6 @@ public class WatchFaceService extends CanvasWatchFaceService{
         boolean showMinute;
         boolean showHour;
         String timeFormat;
-        int accentColor;
 
         //hourHand holds the current bitmap
         Bitmap hourHand;
@@ -181,10 +180,18 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
             nailGearPaint = new Paint();
 
-            showTime = true;
-            showDay = true;
-            showBattery = true;
-            showHour = true;
+            //Setting default values for settings
+
+
+            showBatteryAmb = false;
+            showBatteryInt = true;
+            showDayAmb = true;
+            showDayInt = true;
+            showTimeAmb = showTimeInt = true;
+            showMinute = true;
+            showHour = false;
+            timeFormat = "HH  mm";
+
         }
 
         @Override
@@ -233,10 +240,23 @@ public class WatchFaceService extends CanvasWatchFaceService{
             dayDatePaint.setTextSize(width/16);
             batteryPaint.setTextSize(width/16);
 
+            updateBoolSettings();
+
             float scale = (height/(NG_SCALE*hourHand.getHeight()));
             hourHandScaled = Bitmap.createScaledBitmap(hourHand, (int) (hourHand.getWidth()*scale),(int) (hourHand.getHeight()*scale),false);
 
             drawHandsAndText(canvas,height,width);
+        }
+
+        //Update settings that are dependent on ambient or interactive
+        private void updateBoolSettings() {
+            if(isInAmbientMode()){
+                showDay = showDayAmb;showBattery=showBatteryAmb;showTime=showTimeAmb;
+            }else {
+                showDay = showDayInt;
+                showBattery = showBatteryInt;
+                showTime = showTimeInt;
+            }
         }
 
         Rect getTextBounds(String text){
@@ -291,17 +311,18 @@ public class WatchFaceService extends CanvasWatchFaceService{
             tempCanvas.rotate(-hourHandAngle(),centerX,centerY);
 
             //Draw minute hand
-            tempCanvas.rotate(minuteHandAngle(),centerX,centerY);
-            tempCanvas.drawRect(width*0.49f,height*MH_SCALE,width*0.51f,height*0.53f,accentPaint);
-            tempCanvas.rotate(-minuteHandAngle(),centerX,centerY);
-
+            if(showMinute) {
+                tempCanvas.rotate(minuteHandAngle(), centerX, centerY);
+                tempCanvas.drawRect(width * 0.49f, height * MH_SCALE, width * 0.51f, height * 0.53f, accentPaint);
+                tempCanvas.rotate(-minuteHandAngle(), centerX, centerY);
+            }
             drawHourMarkers(tempCanvas,height,width);
 
 
             //If time needs to be shown
             if(showTime) {
                 //Get string representation of time
-                SimpleDateFormat sdf = new SimpleDateFormat("HH  mm", Locale.ENGLISH);
+                SimpleDateFormat sdf = new SimpleDateFormat(timeFormat, Locale.ENGLISH);
                 String time = sdf.format(date);
 
                 //Get rect for bounds of time
@@ -481,10 +502,88 @@ public class WatchFaceService extends CanvasWatchFaceService{
         private void processConfigurationFor(DataItem item) {
             if ("/nail_and_gear_config".equals(item.getUri().getPath())) {
                 DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();//A map of data (key-value pairs), is inside DataItem
+                String s;
                 if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
-
-                    String accentColor = dataMap.getString("KEY_ACCENT_COLOR");//Get the color string
-                    accentPaint.setColor(Color.parseColor(accentColor));
+                    s = dataMap.getString("KEY_ACCENT_COLOR");
+                    accentPaint.setColor(Color.parseColor(s));
+                }if (dataMap.containsKey("KEY_HANDS")) {
+                    s = dataMap.getString("KEY_HANDS");
+                    switch(s){
+                        case "Hour and Minute":
+                            showHour=showMinute=true;
+                            break;
+                        case "Hour Only":
+                            showHour=true;
+                            showMinute=false;
+                            break;
+                        case "Minute Only":
+                            showHour=false;
+                            showMinute=true;
+                            break;
+                        case "None":
+                            showHour=showMinute=false;
+                    }
+                }if (dataMap.containsKey("KEY_TIME_FORMAT")) {
+                    s= dataMap.getString("KEY_TIME_FORMAT");
+                    switch(s){
+                        case "24 hr time":
+                            timeFormat="HH  mm";
+                            break;
+                        case "12 hr time":
+                            timeFormat ="hh  mm";
+                            break;
+                    }
+                }if (dataMap.containsKey("KEY_SHOW_DATE")) {
+                    s = dataMap.getString("KEY_SHOW_DATE");
+                    switch (s){
+                        case "None":
+                            showDayInt=showDayAmb=false;
+                            break;
+                        case"Ambient Only":
+                            showDayAmb=true;
+                            showDayInt = false;
+                            break;
+                        case "Interactive Only":
+                            showDayAmb=false;
+                            showDayInt = true;
+                            break;
+                        case "Both":
+                            showDayInt=showDayAmb=true;
+                    }
+                }if (dataMap.containsKey("KEY_SHOW_BATTERY")) {
+                    s = dataMap.getString("KEY_SHOW_BATTERY");
+                    switch (s){
+                        case "None":
+                            showBatteryInt=showBatteryAmb=false;
+                            break;
+                        case"Ambient Only":
+                            showBatteryAmb=true;
+                            showBatteryInt = false;
+                            break;
+                        case "Interactive Only":
+                            showBatteryAmb=false;
+                            showBatteryInt = true;
+                            break;
+                        case "Both":
+                            showBatteryInt=showBatteryAmb=true;
+                    }
+                }if (dataMap.containsKey("KEY_SHOW_TIME")) {
+                    s = dataMap.getString("KEY_SHOW_TIME");
+                    switch (s){
+                        case "None":
+                            showTimeInt=showTimeAmb=false;
+                            break;
+                        case"Ambient Only":
+                            showTimeAmb=true;
+                            showTimeInt = false;
+                            break;
+                        case "Interactive Only":
+                            showTimeAmb=false;
+                            showTimeInt = true;
+                            break;
+                        case "Both":
+                            showTimeInt=showTimeAmb=true;
+                    }
                 }
             }
         }
