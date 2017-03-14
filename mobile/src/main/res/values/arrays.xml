@@ -10,7 +10,7 @@
         <item name="white">White</item>
     </string-array>
     <string-array name="amb_int_matrix">
-        <item name="none">None</item>
+        <item name="none">Don't Display</item>
         <item name="amb">Ambient Only</item>
         <item name="int">Interactive Only</item>
         <item name="both">Both</item>

@@ -536,7 +536,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                 }if (dataMap.containsKey("KEY_SHOW_DATE")) {
                     s = dataMap.getString("KEY_SHOW_DATE");
                     switch (s){
-                        case "None":
+                        case "Don't Display":
                             showDayInt=showDayAmb=false;
                             break;
                         case"Ambient Only":
@@ -553,7 +553,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                 }if (dataMap.containsKey("KEY_SHOW_BATTERY")) {
                     s = dataMap.getString("KEY_SHOW_BATTERY");
                     switch (s){
-                        case "None":
+                        case "Don't Display":
                             showBatteryInt=showBatteryAmb=false;
                             break;
                         case"Ambient Only":
@@ -570,7 +570,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                 }if (dataMap.containsKey("KEY_SHOW_TIME")) {
                     s = dataMap.getString("KEY_SHOW_TIME");
                     switch (s){
-                        case "None":
+                        case "Don't Display":
                             showTimeInt=showTimeAmb=false;
                             break;
                         case"Ambient Only":
