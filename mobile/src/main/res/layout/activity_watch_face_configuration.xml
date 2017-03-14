@@ -115,7 +115,7 @@
             android:paddingRight="8dp"
             >
         <Switch
-            android:id="@+id/switch1"
+            android:id="@+id/date_ambient"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="18dp"

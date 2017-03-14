@@ -10,7 +10,9 @@ import android.view.View;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
 import android.widget.Spinner;
+import android.widget.Switch;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -31,7 +33,8 @@ import static android.R.attr.tag;
 
 public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.OnConnectionFailedListener,
+        CompoundButton.OnCheckedChangeListener{
 
 
     //Tags used for logging
@@ -39,6 +42,11 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     private static final String TAG = "WatchFace";
 
     private Spinner colorChooserSpinner;
+
+    Switch dateInt;
+    Switch battInt;
+    Switch dateAmb;
+    Switch battAmb;
 
     private GoogleApiClient googleApiClient;//For wear communication
 
@@ -81,13 +89,16 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
             }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
         });
 
+        dateInt = (Switch) findViewById(R.id.date_ambient);
+        dateInt.setOnCheckedChangeListener();
 
     }
+
+
+
+
 
     @Override
     protected void onStart() {
@@ -180,5 +191,10 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 colorChooserSpinner.setSelection(index);
             }
         }
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        
     }
 }
