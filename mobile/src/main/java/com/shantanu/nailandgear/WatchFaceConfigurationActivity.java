@@ -7,37 +7,52 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Adapter;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataItemBuffer;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-public class WatchFaceConfigurationActivity extends AppCompatActivity implements ColorChooserDialog.Listener,
+import static android.R.attr.color;
+import static android.R.attr.tag;
+
+public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
 
+    //Tags used for logging
     private static final String TAG_ACCENT_COLOR_CHOOSER = "accent_chooser";
     private static final String TAG = "WatchFace";
 
-    private View accentColorImagePreview;
+    private Spinner colorChooserSpinner;
 
-    private GoogleApiClient googleApiClient;
+    private GoogleApiClient googleApiClient;//For wear communication
+
+    String[] colors;
+
+    boolean justOpened = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_watch_face_configuration);
 
-        findViewById(R.id.accent_background_color).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ColorChooserDialog.newInstance(getString(R.string.pick_accent_color))
-                        .show(getFragmentManager(), TAG_ACCENT_COLOR_CHOOSER);
-            }
-        });
+        colors = this.getResources().getStringArray(R.array.colors_array);
+
 
         googleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
@@ -45,8 +60,31 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 .addApi(Wearable.API)
                 .build();
 
-        accentColorImagePreview = findViewById(R.id.accent_background_color_preview);
+        colorChooserSpinner = (Spinner) findViewById(R.id.accent_color_chooser);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.colors_array, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        colorChooserSpinner.setAdapter(adapter);
+        colorChooserSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 
+                if(justOpened)
+                    return;
+                PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
+
+                String color = colors[position];
+                putDataMapRequest.getDataMap().putString("KEY_ACCENT_COLOR",color);
+                Log.d(TAG,"color changed to "+color);
+
+                PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
+                Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
 
 
     }
@@ -61,6 +99,12 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     @Override
     public void onConnected(Bundle bundle) {
         Log.d(TAG, "onConnected");
+
+        Wearable.DataApi.addListener(googleApiClient, onDataChangedListener);//Listener functions for when any DataItem is changed, googleApiRequired as first param
+        //getDataItems Retrieves all data items from the Android Wear network.
+        //setResultCallback sets the function to be called when the Pending Result is retrieved
+
+        Wearable.DataApi.getDataItems(googleApiClient).setResultCallback(onConnectedResultCallback);
     }
 
     @Override
@@ -76,7 +120,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     @Override
     protected void onStop() {
         if (googleApiClient != null && googleApiClient.isConnected()) {
-            googleApiClient.disconnect();
+            releaseGoogleApiClient();
         }
         super.onStop();
     }
@@ -90,17 +134,51 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onColorSelected(String color, String tag) {
 
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
+    private final DataApi.DataListener onDataChangedListener = new DataApi.DataListener() {
+        @Override
+        public void onDataChanged(DataEventBuffer dataEvents) {//Dataevents is an array of Data Events, each event contains the DataItem and whether it was changed or deleted
+            for (DataEvent event : dataEvents) {
+                if (event.getType() == DataEvent.TYPE_CHANGED) {
+                    DataItem item = event.getDataItem();//get Data item and process
+                    processConfigurationFor(item);
+                }
+            }
 
-        if (TAG_ACCENT_COLOR_CHOOSER.equals(tag)) {
-            accentColorImagePreview.setBackgroundColor(Color.parseColor(color));
-            putDataMapRequest.getDataMap().putString("KEY_ACCENT_COLOR",color);
+            dataEvents.release();
         }
+    };
+    //This is called everytime conncetion is made
+    private final ResultCallback<DataItemBuffer> onConnectedResultCallback = new ResultCallback<DataItemBuffer>() {
+        @Override
+        public void onResult(DataItemBuffer dataItems) {
+            for (DataItem item : dataItems) {
+                processConfigurationFor(item);
+            }
+            justOpened = false;
+            dataItems.release();
+        }
+    };
+    private void releaseGoogleApiClient() {
+        if (googleApiClient != null && googleApiClient.isConnected()) {
+            Wearable.DataApi.removeListener(googleApiClient, onDataChangedListener);//Wearable dataApi used to sync DataItem across all wear devices conncted automatically
+            googleApiClient.disconnect();
+        }
+    }
+    private void processConfigurationFor(DataItem item) {
+        if ("/nail_and_gear_config".equals(item.getUri().getPath())) {
+            DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();//A map of data (key-value pairs), is inside DataItem
+            if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
 
-        PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
-        Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
+                String accentColor = dataMap.getString("KEY_ACCENT_COLOR");//Get the color string
+                int index = 0;
+                for(int i=0;i<colors.length;i++){
+                    Log.d(TAG,colors[i]+" "+accentColor);
+                    if(accentColor.equalsIgnoreCase(colors[i]))
+                        index=i;
+                }
+                colorChooserSpinner.setSelection(index);
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.shantanu.nailandgear;
 
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -51,7 +52,6 @@ public class WatchFaceService extends CanvasWatchFaceService{
     @Override
     public Engine onCreateEngine() {
         /* provide your watch face implementation */
-
         return new Engine();
     }
 
@@ -66,7 +66,8 @@ public class WatchFaceService extends CanvasWatchFaceService{
         static final int INTERACTIVE_UPDATE_RATE_MS = 1000;//1 second update but its not really used
 
         //These are usd to draw properly on circular and square displays
-        float HH_SCALE;//hour hand(nail and gear Inversely
+        float NG_SCALE;//nail and gear Inversely
+        float HH_SCALE;//hour hand
         float MH_SCALE;//minute hand y-coord of top
         float HM_SCALE;//Dots scale y coord of centre
         float DAY_POS;//Position of date y coord of text
@@ -84,6 +85,16 @@ public class WatchFaceService extends CanvasWatchFaceService{
         boolean showTime;
         boolean showDay;
         boolean showBattery;
+        boolean showTimeInt;
+        boolean showDayInt;
+        boolean showBatteryInt;
+        boolean showTimeAmb;
+        boolean showDayAmb;
+        boolean showBatteryAmb;
+        boolean showMinute;
+        boolean showHour;
+        String timeFormat;
+        int accentColor;
 
         //hourHand holds the current bitmap
         Bitmap hourHand;
@@ -95,13 +106,10 @@ public class WatchFaceService extends CanvasWatchFaceService{
         TextPaint hourMinutePaint;
         TextPaint dayDatePaint;
         Paint nailGearPaint;
-        Paint minuteHandPaint;
-        Paint hourMarkerPaint;
+        Paint accentPaint;
         Paint black;
-        Paint mainHourMarkerPaint;
+        Paint hourMarkerPaint;
         Paint batteryPaint;
-
-        int accent = Color.WHITE;//This is int because low bit mode uses int for colour
 
         final Handler mUpdateTimeHandler = new Handler() {
             @Override
@@ -158,8 +166,8 @@ public class WatchFaceService extends CanvasWatchFaceService{
             dayDatePaint.setTextAlign(Paint.Align.CENTER);
             dayDatePaint.setAntiAlias(false);
 
-            minuteHandPaint = new Paint();
-            minuteHandPaint.setColor(accent);
+            accentPaint = new Paint();
+            accentPaint.setColor(Color.WHITE);
 
             batteryPaint = new Paint();
             batteryPaint.setColor(Color.WHITE);
@@ -171,14 +179,12 @@ public class WatchFaceService extends CanvasWatchFaceService{
             hourMarkerPaint = new Paint();
             hourMarkerPaint.setColor(Color.WHITE);
 
-            mainHourMarkerPaint = new Paint();
-            mainHourMarkerPaint.setColor(accent);
-
             nailGearPaint = new Paint();
 
-            showTime = false;
-            showDay = false;
-            showBattery = false;
+            showTime = true;
+            showDay = true;
+            showBattery = true;
+            showHour = true;
         }
 
         @Override
@@ -227,7 +233,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
             dayDatePaint.setTextSize(width/16);
             batteryPaint.setTextSize(width/16);
 
-            float scale = (height/(HH_SCALE*hourHand.getHeight()));
+            float scale = (height/(NG_SCALE*hourHand.getHeight()));
             hourHandScaled = Bitmap.createScaledBitmap(hourHand, (int) (hourHand.getWidth()*scale),(int) (hourHand.getHeight()*scale),false);
 
             drawHandsAndText(canvas,height,width);
@@ -246,18 +252,19 @@ public class WatchFaceService extends CanvasWatchFaceService{
             super.onApplyWindowInsets(insets);
             isRound = insets.isRound();
             if(isRound){
-                HH_SCALE = 1.27f;//Inversely
+                NG_SCALE = 1.27f;//Inversely
+                HH_SCALE = 0.28f;
                 MH_SCALE = 0.12f;//y-coord of top of minute hand
                 HM_SCALE = 0.07f;//y-coord of circle
-                DAY_POS = 0.35f;//y-coord of text
+                DAY_POS = 0.30f;//y-coord of text
                 DATE_POS = 0.60f;
                 BAT_POS = 0.60f;
             }else{
-                HH_SCALE = 1.27f;
+                NG_SCALE = 1.27f;
+                HH_SCALE = 0.28f;
                 MH_SCALE = 0.12f;
                 HM_SCALE = 0.07f;
-                DAY_POS = 0.38f;
-
+                DAY_POS = 0.35f;
                 BAT_POS = 0.60f;
             }
         }
@@ -278,11 +285,14 @@ public class WatchFaceService extends CanvasWatchFaceService{
             //Draw hour hand
             tempCanvas.rotate (hourHandAngle(),centerX,centerY);
             tempCanvas.drawBitmap(hourHandScaled,centerX-(hourHandScaled.getWidth()/2),centerY-(hourHandScaled.getHeight()/2),nailGearPaint);
+            if(showHour){
+                tempCanvas.drawRect(width*0.49f,height*HH_SCALE,width*0.51f,height*0.53f,accentPaint);
+            }
             tempCanvas.rotate(-hourHandAngle(),centerX,centerY);
 
             //Draw minute hand
             tempCanvas.rotate(minuteHandAngle(),centerX,centerY);
-            tempCanvas.drawRect(width*0.49f,height*MH_SCALE,width*0.51f,height*0.5f,minuteHandPaint);
+            tempCanvas.drawRect(width*0.49f,height*MH_SCALE,width*0.51f,height*0.53f,accentPaint);
             tempCanvas.rotate(-minuteHandAngle(),centerX,centerY);
 
             drawHourMarkers(tempCanvas,height,width);
@@ -305,7 +315,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
             }
             if(showDay){
 
-                SimpleDateFormat sdf = new SimpleDateFormat("EEE d MMM",Locale.ENGLISH);
+                SimpleDateFormat sdf = new SimpleDateFormat("EEE d",Locale.ENGLISH);
                 String day = sdf.format(date);
 
                 Rect dayCoords = getTextBounds(day);
@@ -365,7 +375,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
             //draw 12 hour markers
             for(int i=0;i<4;i++){
                 if(!cardPresent||i!=2||isRound) {//Dont draw the second main marker if card present and is square
-                    canvas.drawCircle(centreX, height * HM_SCALE, height * 0.02f, mainHourMarkerPaint);
+                    canvas.drawCircle(centreX, height * HM_SCALE, height * 0.02f, accentPaint);
                 }
                 canvas.rotate(30,centreX,centreY);
                 canvas.drawCircle(centreX,height*HM_SCALE,height*0.02f,hourMarkerPaint);
@@ -474,9 +484,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                 if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
 
                     String accentColor = dataMap.getString("KEY_ACCENT_COLOR");//Get the color string
-                    accent=Color.parseColor(accentColor);
-                    mainHourMarkerPaint.setColor(accent);
-                    minuteHandPaint.setColor(accent);
+                    accentPaint.setColor(Color.parseColor(accentColor));
                 }
             }
         }
