@@ -55,12 +55,12 @@ public class WatchFaceService extends CanvasWatchFaceService{
         return new Engine();
     }
 
-    /* implement service callback methods */
+    /* implement service callback methods and connection methoids*/
     private class Engine extends CanvasWatchFaceService.Engine implements GoogleApiClient.ConnectionCallbacks,
     GoogleApiClient.OnConnectionFailedListener{
-        private GoogleApiClient googleApiClient;
+        private GoogleApiClient googleApiClient;//The main entry point for Google Play services integration.
 
-        private String TAG="Watch Face";
+        private String TAG="Watch Face";//Used for debugging
 
         static final int MSG_UPDATE_TIME = 0;
         static final int INTERACTIVE_UPDATE_RATE_MS = 1000;//1 second update but its not really used
@@ -125,6 +125,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
 
+            //Copypasted
             googleApiClient = new GoogleApiClient.Builder(WatchFaceService.this)
                     .addApi(Wearable.API)
                     .addConnectionCallbacks(this)
@@ -379,19 +380,20 @@ public class WatchFaceService extends CanvasWatchFaceService{
             super.onVisibilityChanged(visible);
             /* the watch face became visible or invisible */
 
+            //Pretty self explanatory. Connect and disconnect
             if (visible) {
                 googleApiClient.connect();
             } else {
                 releaseGoogleApiClient();
             }
-            // Whether the timer should be running depends on whether we're visible and
-            // whether we're in ambient mode, so we may need to start or stop the timer
             updateTimer();
 
         }
+
+
         private void releaseGoogleApiClient() {
             if (googleApiClient != null && googleApiClient.isConnected()) {
-                Wearable.DataApi.removeListener(googleApiClient, onDataChangedListener);
+                Wearable.DataApi.removeListener(googleApiClient, onDataChangedListener);//Wearable dataApi used to sync DataItem across all wear devices conncted automatically
                 googleApiClient.disconnect();
             }
         }
@@ -418,15 +420,21 @@ public class WatchFaceService extends CanvasWatchFaceService{
         {
             IntentFilter iFilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
             Intent batteryStatus =  registerReceiver(null, iFilter);
-
             return batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
         }
+
+
 
         @Override
         public void onConnected(@Nullable Bundle bundle) {
             Log.d(TAG, "connected GoogleAPI");
-            Wearable.DataApi.addListener(googleApiClient, onDataChangedListener);
+            Wearable.DataApi.addListener(googleApiClient, onDataChangedListener);//Listener functions for when any DataItem is changed, googleApiRequired as first param
+            //getDataItems Retrieves all data items from the Android Wear network.
+            //setResultCallback sets the function to be called when the Pending Result is retrieved
+
             Wearable.DataApi.getDataItems(googleApiClient).setResultCallback(onConnectedResultCallback);
+
+
         }
 
         @Override
@@ -444,12 +452,13 @@ public class WatchFaceService extends CanvasWatchFaceService{
             super.onDestroy();
         }
 
+
         private final DataApi.DataListener onDataChangedListener = new DataApi.DataListener() {
             @Override
-            public void onDataChanged(DataEventBuffer dataEvents) {
+            public void onDataChanged(DataEventBuffer dataEvents) {//Dataevents is an array of Data Events, each event contains the DataItem and whether it was changed or deleted
                 for (DataEvent event : dataEvents) {
                     if (event.getType() == DataEvent.TYPE_CHANGED) {
-                        DataItem item = event.getDataItem();
+                        DataItem item = event.getDataItem();//get Data item and process
                         processConfigurationFor(item);
                     }
                 }
@@ -461,11 +470,10 @@ public class WatchFaceService extends CanvasWatchFaceService{
 
         private void processConfigurationFor(DataItem item) {
             if ("/nail_and_gear_config".equals(item.getUri().getPath())) {
-                DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
+                DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();//A map of data (key-value pairs), is inside DataItem
                 if (dataMap.containsKey("KEY_ACCENT_COLOR")) {
 
-
-                    String accentColor = dataMap.getString("KEY_ACCENT_COLOR");
+                    String accentColor = dataMap.getString("KEY_ACCENT_COLOR");//Get the color string
                     accent=Color.parseColor(accentColor);
                     mainHourMarkerPaint.setColor(accent);
                     minuteHandPaint.setColor(accent);
@@ -473,6 +481,8 @@ public class WatchFaceService extends CanvasWatchFaceService{
             }
         }
 
+
+        //This is called everytime conncetion is made
         private final ResultCallback<DataItemBuffer> onConnectedResultCallback = new ResultCallback<DataItemBuffer>() {
             @Override
             public void onResult(DataItemBuffer dataItems) {
