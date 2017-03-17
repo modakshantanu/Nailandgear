@@ -51,7 +51,123 @@
 
         </RelativeLayout>
 
+        <RelativeLayout
+            android:id="@+id/accent_color_random"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp">
 
+            <Switch
+                android:id="@+id/random_accent_switch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="18dp"
+                android:text="Randomize color on set interval"/>
+
+        </RelativeLayout>
+        <RelativeLayout
+            android:id="@+id/choose_colors"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:text="Time interval"
+                />
+            <Spinner
+                android:id="@+id/time_interval_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentEnd="true"
+                android:textColor="@android:color/black"
+                android:textSize="18sp">
+
+            </Spinner>
+
+
+        </RelativeLayout>
+
+        <LinearLayout
+            android:id="@+id/checkboxes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="8dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            >
+
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_red"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:buttonTint="#FF0000"
+                android:layout_weight="1"
+                android:checked="true" />
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_green"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+
+                android:buttonTint="#00FF00"
+                android:checked="true" />
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_cyan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="#00FFFF"
+                android:checked="true" />
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_magenta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+
+                android:buttonTint="#FF00FF"
+                android:checked="true" />
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="#0000FF"
+                android:checked="true" />
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_yellow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="#FFFF00"
+                android:checked="true" />
+            <android.support.v7.widget.AppCompatCheckBox
+                android:id="@+id/check_white"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:buttonTint="#FFFFFF"
+                android:checked="true" />
+
+        </LinearLayout>
 
         <RelativeLayout
             android:id="@+id/time_format"

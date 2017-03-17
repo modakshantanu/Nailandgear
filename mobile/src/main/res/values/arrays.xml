@@ -13,7 +13,7 @@
         <item name="none">Don\'t Display</item>
         <item name="amb">Ambient Only</item>
         <item name="int">Interactive Only</item>
-        <item name="both">Both</item>
+        <item name="both">Both Modes</item>
     </string-array>
     <string-array name="hands_display">
         <item name="hm">Hour and Minute</item>
@@ -24,5 +24,12 @@
     <string-array name="time_formats">
         <item name="HH  mm">24 hr time</item>
         <item name="hh  mm">12 hr time</item>
+    </string-array>
+    <string-array name="time_intervals">
+        <item name="minute">1 min</item>
+        <item name="15 mins">15 mins</item>
+        <item name="1 hour">1 hour</item>
+        <item name="6 hours">6 hours</item>
+        <item name="1 day">24 hours</item>
     </string-array>
 </resources>

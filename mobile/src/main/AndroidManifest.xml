@@ -20,10 +20,12 @@
         <activity android:name=".WatchFaceConfigurationActivity">
             <intent-filter>
                 <action android:name="com.shantanu.nailandgear.CONFIG_DIGITAL" />
+
                 <category android:name="com.google.android.wearable.watchface.category.COMPANION_CONFIGURATION" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".RandomAccentConfig"></activity>
     </application>
 
 </manifest>

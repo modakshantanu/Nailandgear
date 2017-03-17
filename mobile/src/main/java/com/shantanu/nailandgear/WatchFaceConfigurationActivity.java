@@ -10,7 +10,10 @@ import android.view.View;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.Switch;
 
@@ -31,12 +34,16 @@ import com.google.android.gms.wearable.Wearable;
 import java.util.List;
 
 import static android.R.attr.color;
+import static android.R.attr.data;
 import static android.R.attr.tag;
+import static android.R.attr.value;
+import static android.view.View.VISIBLE;
 
 public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        AdapterView.OnItemSelectedListener{
+        AdapterView.OnItemSelectedListener,
+        CompoundButton.OnCheckedChangeListener{
 
 
     //Tags used for logging
@@ -49,10 +56,16 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     Spinner hands;
     Spinner timeformat;
     Spinner time;
+    Spinner timeInterval;
+    Switch randomize;
+    CheckBox red,cyan,green,blue,magenta,yellow,white;
+
+    LinearLayout checkboxes;
+    RelativeLayout chooseColors;
 
     private GoogleApiClient googleApiClient;//For wear communication
 
-    String[] colors,ambIntMatrix,handsMat,timeFormats;
+    String[] colors,ambIntMatrix,handsMat,timeFormats,timeIntervals;
 
     boolean justOpened = true;
 
@@ -66,6 +79,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         ambIntMatrix = this.getResources().getStringArray(R.array.amb_int_matrix);
         handsMat = this.getResources().getStringArray(R.array.hands_display);
         timeFormats = this.getResources().getStringArray(R.array.time_formats);
+        timeIntervals = this.getResources().getStringArray(R.array.time_intervals);
 
         googleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
@@ -121,6 +135,34 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         time.setSelection(3);
         time.setOnItemSelectedListener(this);
 
+        timeInterval = (Spinner) findViewById(R.id.time_interval_spinner);
+        ArrayAdapter<CharSequence> timeIntAdapter = ArrayAdapter.createFromResource(this,
+                R.array.time_intervals, android.R.layout.simple_spinner_item);
+        timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        timeInterval.setAdapter(timeIntAdapter);
+        timeInterval.setSelection(2);
+        timeInterval.setOnItemSelectedListener(this);
+
+        red = (CheckBox) findViewById(R.id.check_red);
+        green = (CheckBox) findViewById(R.id.check_green);
+        blue = (CheckBox) findViewById(R.id.check_blue);
+        white = (CheckBox) findViewById(R.id.check_white);
+        magenta = (CheckBox) findViewById(R.id.check_magenta);
+        yellow = (CheckBox) findViewById(R.id.check_yellow);
+        cyan = (CheckBox) findViewById(R.id.check_cyan);
+        randomize = (Switch) findViewById(R.id.random_accent_switch);
+
+        red.setOnCheckedChangeListener(this);
+        green.setOnCheckedChangeListener(this);
+        blue.setOnCheckedChangeListener(this);
+        white.setOnCheckedChangeListener(this);
+        magenta.setOnCheckedChangeListener(this);
+        yellow.setOnCheckedChangeListener(this);
+        cyan.setOnCheckedChangeListener(this);
+        randomize.setOnCheckedChangeListener(this);
+
+        chooseColors = (RelativeLayout) findViewById(R.id.choose_colors);
+        checkboxes = (LinearLayout) findViewById(R.id.checkboxes);
     }
 
 
@@ -173,6 +215,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     private final DataApi.DataListener onDataChangedListener = new DataApi.DataListener() {
         @Override
         public void onDataChanged(DataEventBuffer dataEvents) {//Dataevents is an array of Data Events, each event contains the DataItem and whether it was changed or deleted
+
             for (DataEvent event : dataEvents) {
                 if (event.getType() == DataEvent.TYPE_CHANGED) {
                     DataItem item = event.getDataItem();//get Data item and process
@@ -211,6 +254,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                     if(s.equalsIgnoreCase(colors[i]))
                         index=i;
                 }
+                Log.d(TAG,s);
                 colorChooserSpinner.setSelection(index);
             }if (dataMap.containsKey("KEY_TIME_FORMAT")) {
                 String s = dataMap.getString("KEY_TIME_FORMAT");
@@ -219,6 +263,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                     if(s.equalsIgnoreCase(timeFormats[i]))
                         index=i;
                 }
+
                 timeformat.setSelection(index);
             }if (dataMap.containsKey("KEY_HANDS")) {
                 String s = dataMap.getString("KEY_HANDS");
@@ -255,6 +300,45 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                         index = i;
                 }
                 time.setSelection(index);
+            }if (dataMap.containsKey("KEY_RANDOMIZE")){
+                Log.d(TAG,"Set");
+
+                randomize.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_RANDOMIZE")));
+                if(Boolean.parseBoolean(dataMap.getString("KEY_RANDOMIZE"))){
+
+
+                    checkboxes.setVisibility(VISIBLE);
+                    chooseColors.setVisibility(VISIBLE);
+                }else{
+                    checkboxes.setVisibility(View.GONE);
+                    chooseColors.setVisibility(View.GONE);
+                }
+            }if (dataMap.containsKey("KEY_TIME_INTERVAL")) {
+
+                String s = dataMap.getString("KEY_TIME_INTERVAL");
+                int index = 0;
+                for (int i = 0; i < timeIntervals.length; i++) {
+                    if (s.equalsIgnoreCase(timeIntervals[i]))
+                        index = i;
+                }
+                timeInterval.setSelection(index);
+            }if(dataMap.containsKey("KEY_CHECKBOXES")){
+                String s = dataMap.getString("KEY_CHECKBOXES");
+
+                if(s.substring(0).startsWith("0"))
+                    red.setChecked(false);
+                if(s.substring(1).startsWith("0"))
+                    green.setChecked(false);
+                if(s.substring(2).startsWith("0"))
+                    cyan.setChecked(false);
+                if(s.substring(3).startsWith("0"))
+                    magenta.setChecked(false);
+                if(s.substring(4).startsWith("0"))
+                    blue.setChecked(false);
+                if(s.substring(5).startsWith("0"))
+                    yellow.setChecked(false);
+                if(s.substring(6).startsWith("0"))
+                    white.setChecked(false);
             }
         }
     }
@@ -293,6 +377,10 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 s = ambIntMatrix[position];
                 putDataMapRequest.getDataMap().putString("KEY_SHOW_TIME",s);
                 break;
+            case R.id.time_interval_spinner:
+                s = timeIntervals[position];
+                putDataMapRequest.getDataMap().putString("KEY_TIME_INTERVAL",s);
+                break;
         }
 
         PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
@@ -302,5 +390,28 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     @Override
     public void onNothingSelected(AdapterView<?> parent) {
 
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        if(justOpened)
+            return;
+
+        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
+        String s;
+
+        if(buttonView.getId() == R.id.random_accent_switch){
+            if(isChecked){
+                checkboxes.setVisibility(VISIBLE);
+                chooseColors.setVisibility(VISIBLE);
+                putDataMapRequest.getDataMap().putString("KEY_RANDOMIZE","true");
+            }else{
+                checkboxes.setVisibility(View.GONE);
+                chooseColors.setVisibility(View.GONE);
+                putDataMapRequest.getDataMap().putString("KEY_RANDOMIZE","false");
+            }
+        }
+        PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
+        Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
     }
 }

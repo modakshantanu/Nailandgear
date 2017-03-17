@@ -547,7 +547,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                             showDayAmb=false;
                             showDayInt = true;
                             break;
-                        case "Both":
+                        case "Both Modes":
                             showDayInt=showDayAmb=true;
                     }
                 }if (dataMap.containsKey("KEY_SHOW_BATTERY")) {
@@ -564,7 +564,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                             showBatteryAmb=false;
                             showBatteryInt = true;
                             break;
-                        case "Both":
+                        case "Both Modes":
                             showBatteryInt=showBatteryAmb=true;
                     }
                 }if (dataMap.containsKey("KEY_SHOW_TIME")) {
@@ -581,7 +581,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                             showTimeAmb=false;
                             showTimeInt = true;
                             break;
-                        case "Both":
+                        case "Both Modes":
                             showTimeInt=showTimeAmb=true;
                     }
                 }
