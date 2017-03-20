@@ -16,10 +16,13 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.Switch;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.BooleanResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
@@ -46,6 +49,8 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         CompoundButton.OnCheckedChangeListener{
 
 
+
+
     //Tags used for logging
     private static final String TAG_ACCENT_COLOR_CHOOSER = "accent_chooser";
     private static final String TAG = "WatchFace";
@@ -64,6 +69,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     RelativeLayout chooseColors;
 
     private GoogleApiClient googleApiClient;//For wear communication
+    private PutDataMapRequest putDataMapRequest;
 
     String[] colors,ambIntMatrix,handsMat,timeFormats,timeIntervals;
 
@@ -233,6 +239,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
             for (DataItem item : dataItems) {
                 processConfigurationFor(item);
             }
+            putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");// create should only be called once, since it overwrites stuff
             justOpened = false;
             dataItems.release();
         }
@@ -263,7 +270,6 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                     if(s.equalsIgnoreCase(timeFormats[i]))
                         index=i;
                 }
-
                 timeformat.setSelection(index);
             }if (dataMap.containsKey("KEY_HANDS")) {
                 String s = dataMap.getString("KEY_HANDS");
@@ -322,24 +328,22 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                         index = i;
                 }
                 timeInterval.setSelection(index);
-            }if(dataMap.containsKey("KEY_CHECKBOXES")){
-                String s = dataMap.getString("KEY_CHECKBOXES");
-
-                if(s.substring(0).startsWith("0"))
-                    red.setChecked(false);
-                if(s.substring(1).startsWith("0"))
-                    green.setChecked(false);
-                if(s.substring(2).startsWith("0"))
-                    cyan.setChecked(false);
-                if(s.substring(3).startsWith("0"))
-                    magenta.setChecked(false);
-                if(s.substring(4).startsWith("0"))
-                    blue.setChecked(false);
-                if(s.substring(5).startsWith("0"))
-                    yellow.setChecked(false);
-                if(s.substring(6).startsWith("0"))
-                    white.setChecked(false);
+            }if(dataMap.containsKey("KEY_CHECK_RED")){
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_RED")));
+            }if(dataMap.containsKey("KEY_CHECK_YELLOW")) {
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_YELLOW")));
+            }if(dataMap.containsKey("KEY_CHECK_BLUE")) {
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_BLUE")));
+            }if(dataMap.containsKey("KEY_CHECK_GREEN")) {
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_GREEN")));
+            }if(dataMap.containsKey("KEY_CHECK_MAGENTA")) {
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_MAGENTA")));
+            }if(dataMap.containsKey("KEY_CHECK_WHITE")) {
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_WHITE")));
+            }if(dataMap.containsKey("KEY_CHECK_CYAN")) {
+                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_CYAN")));
             }
+
         }
     }
 
@@ -348,7 +352,6 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     public void onItemSelected(AdapterView<?> view, View child, int position, long id) {
         if(justOpened)
             return;
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
 
         String s;
 
@@ -397,7 +400,6 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         if(justOpened)
             return;
 
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
         String s;
 
         if(buttonView.getId() == R.id.random_accent_switch){
@@ -410,7 +412,40 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 chooseColors.setVisibility(View.GONE);
                 putDataMapRequest.getDataMap().putString("KEY_RANDOMIZE","false");
             }
+        }else{
+
+            if(!(red.isChecked()||blue.isChecked()||green.isChecked()||yellow.isChecked()||magenta.isChecked()||white.isChecked()||cyan.isChecked())){
+                Toast.makeText(getApplicationContext(),"At least one color must be selected",Toast.LENGTH_LONG).show();
+                buttonView.setChecked(true);
+                return;
+            }
+
+            switch(buttonView.getId()){
+                case R.id.check_red:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_RED", Boolean.toString(isChecked));
+                    break;
+                case R.id.check_blue:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_BLUE", Boolean.toString(isChecked));
+                    break;
+                case R.id.check_yellow:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_YELLOW", Boolean.toString(isChecked));
+                    break;
+                case R.id.check_green:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_GREEN", Boolean.toString(isChecked));
+                    break;
+                case R.id.check_magenta:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_MAGENTA", Boolean.toString(isChecked));
+                    break;
+                case R.id.check_white:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_WHITE", Boolean.toString(isChecked));
+                    break;
+                case R.id.check_cyan:
+                    putDataMapRequest.getDataMap().putString("KEY_CHECK_CYAN", Boolean.toString(isChecked));
+                    break;
+            }
         }
+
+
         PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
         Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
     }

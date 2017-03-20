@@ -37,8 +37,16 @@ import com.google.android.gms.wearable.Wearable;
 
 import java.io.Console;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static android.support.wearable.watchface.WatchFaceStyle.PEEK_MODE_SHORT;
 import static android.support.wearable.watchface.WatchFaceStyle.PROTECT_STATUS_BAR;
@@ -93,6 +101,16 @@ public class WatchFaceService extends CanvasWatchFaceService{
         boolean showBatteryAmb;
         boolean showMinute;
         boolean showHour;
+        boolean randomize;
+        boolean checkRed;
+        boolean checkYellow;
+        boolean checkBlue;
+        boolean checkWhite;
+        boolean checkMagenta;
+        boolean checkCyan;
+        boolean checkGreen;
+        int timeInterval;
+        Date nextChange;
         String timeFormat;
 
         //hourHand holds the current bitmap
@@ -131,6 +149,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
+
 
             //Copypasted
             googleApiClient = new GoogleApiClient.Builder(WatchFaceService.this)
@@ -181,8 +200,6 @@ public class WatchFaceService extends CanvasWatchFaceService{
             nailGearPaint = new Paint();
 
             //Setting default values for settings
-
-
             showBatteryAmb = false;
             showBatteryInt = true;
             showDayAmb = true;
@@ -191,6 +208,16 @@ public class WatchFaceService extends CanvasWatchFaceService{
             showMinute = true;
             showHour = false;
             timeFormat = "HH  mm";
+            checkRed = true;
+            checkYellow = true;
+            checkBlue = true;
+            checkWhite = true;
+            checkMagenta = true;
+            checkCyan = true;
+            checkGreen = true;
+            randomize = false;
+            timeInterval = 60;
+            nextChange = new Date();
 
         }
 
@@ -228,6 +255,39 @@ public class WatchFaceService extends CanvasWatchFaceService{
         public void onDraw(Canvas canvas, Rect bounds) {
             /* draw your watch face */
             date.setTime(System.currentTimeMillis());
+
+            if(date.compareTo(nextChange)>=0 &&randomize){
+
+                ArrayList<Integer> colors = new ArrayList<>();
+
+                if(checkRed)
+                    colors.add(Color.RED);
+                if(checkBlue)
+                    colors.add(Color.BLUE);
+                if(checkYellow)
+                    colors.add(Color.YELLOW);
+                if(checkGreen)
+                    colors.add(Color.GREEN);
+                if(checkWhite)
+                    colors.add(Color.WHITE);
+                if(checkMagenta)
+                    colors.add(Color.MAGENTA);
+                if(checkCyan)
+                    colors.add(Color.CYAN);
+
+
+                if(!colors.isEmpty()){
+                    int newColor = colors.get(ThreadLocalRandom.current().nextInt(colors.size()));
+                    while(newColor!=accentPaint.getColor()){
+                        
+
+
+                    }
+                }
+                colors.clear();
+                nextChange.setTime(System.currentTimeMillis()/60000 + timeInterval);
+            }
+
 
             int width = bounds.width();
             int height = bounds.height();
@@ -584,6 +644,42 @@ public class WatchFaceService extends CanvasWatchFaceService{
                         case "Both Modes":
                             showTimeInt=showTimeAmb=true;
                     }
+                }if(dataMap.containsKey("KEY_RANDOMIZE"))  {
+                    randomize = Boolean.parseBoolean(dataMap.getString("KEY_RANDOMIZE"));
+                }if(dataMap.containsKey("KEY_CHECK_RED")){
+                    checkRed = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_RED"));
+                }if(dataMap.containsKey("KEY_CHECK_BLUE")){
+                    checkBlue = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_BLUE"));
+                }if(dataMap.containsKey("KEY_CHECK_CYAN")){
+                    checkCyan = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_CYAN"));
+                }if(dataMap.containsKey("KEY_CHECK_GREEN")){
+                    checkGreen = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_GREEN"));
+                }if(dataMap.containsKey("KEY_CHECK_WHITE")){
+                    checkWhite = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_WHITE"));
+                }if(dataMap.containsKey("KEY_CHECK_YELLOW")){
+                    checkYellow = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_YELLOW"));
+                }if(dataMap.containsKey("KEY_CHECK_MAGENTA")){
+                    checkMagenta = Boolean.parseBoolean(dataMap.getString("KEY_CHECK_MAGENTA"));
+                }if(dataMap.containsKey("KEY_TIME_INTERVAL")){
+                    switch(dataMap.getString("KEY_TIME_INTERVAL")){
+                        case "1 min":
+                            timeInterval = 1;
+                            break;
+                        case "15 mins":
+                            timeInterval = 15;
+                            break;
+                        case "1 hour":
+                            timeInterval = 60;
+                            break;
+                        case "6 hours":
+                            timeInterval = 360;
+                            break;
+                        case "24 hours":
+                            timeInterval = 1440;
+                            break;
+
+                    }
+                    nextChange.setTime((System.currentTimeMillis()/60000)+(timeInterval-(System.currentTimeMillis()/60000)%timeInterval));
                 }
             }
         }
