@@ -76,7 +76,7 @@
             android:paddingBottom="8dp"
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
-            android:visibility="gone">
+            >
 
             <TextView
                 android:layout_width="wrap_content"
@@ -92,12 +92,13 @@
                 android:id="@+id/time_interval_spinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
                 android:layout_alignParentRight="true"
                 android:layout_alignParentEnd="true"
                 android:textColor="@android:color/black"
-                android:textSize="18sp">
+                android:textSize="18sp"/>
 
-            </Spinner>
+
 
 
         </RelativeLayout>
@@ -111,7 +112,6 @@
             android:paddingRight="8dp"
             android:paddingTop="8dp"
             android:layout_gravity="center"
-            android:visibility="gone"
             >
 
             <android.support.v7.widget.AppCompatCheckBox

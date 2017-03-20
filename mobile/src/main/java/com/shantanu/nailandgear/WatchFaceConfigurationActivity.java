@@ -55,6 +55,11 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
     private static final String TAG_ACCENT_COLOR_CHOOSER = "accent_chooser";
     private static final String TAG = "WatchFace";
 
+    int spinnerCount=7;
+    int checkCount=8;
+    int spinnercalled=0;
+    int checkcalled=0;
+
     Spinner colorChooserSpinner;
     Spinner date;
     Spinner batt;
@@ -70,6 +75,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
 
     private GoogleApiClient googleApiClient;//For wear communication
     private PutDataMapRequest putDataMapRequest;
+    private PutDataRequest putDataRequest;
 
     String[] colors,ambIntMatrix,handsMat,timeFormats,timeIntervals;
 
@@ -92,6 +98,8 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 .addOnConnectionFailedListener(this)
                 .addApi(Wearable.API)
                 .build();
+
+        putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");// create should only be called once, since it overwrites stuff
 
         colorChooserSpinner = (Spinner) findViewById(R.id.accent_color_chooser);
         ArrayAdapter<CharSequence> colorAdapter = ArrayAdapter.createFromResource(this,
@@ -144,7 +152,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         timeInterval = (Spinner) findViewById(R.id.time_interval_spinner);
         ArrayAdapter<CharSequence> timeIntAdapter = ArrayAdapter.createFromResource(this,
                 R.array.time_intervals, android.R.layout.simple_spinner_item);
-        timeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        timeIntAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         timeInterval.setAdapter(timeIntAdapter);
         timeInterval.setSelection(2);
         timeInterval.setOnItemSelectedListener(this);
@@ -237,10 +245,13 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         @Override
         public void onResult(DataItemBuffer dataItems) {
             for (DataItem item : dataItems) {
+                Log.d("Length",Integer.toString(dataItems.getCount()));
                 processConfigurationFor(item);
             }
-            putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");// create should only be called once, since it overwrites stuff
+
             justOpened = false;
+
+
             dataItems.release();
         }
     };
@@ -261,7 +272,6 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                     if(s.equalsIgnoreCase(colors[i]))
                         index=i;
                 }
-                Log.d(TAG,s);
                 colorChooserSpinner.setSelection(index);
             }if (dataMap.containsKey("KEY_TIME_FORMAT")) {
                 String s = dataMap.getString("KEY_TIME_FORMAT");
@@ -307,17 +317,11 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 }
                 time.setSelection(index);
             }if (dataMap.containsKey("KEY_RANDOMIZE")){
-                Log.d(TAG,"Set");
-
                 randomize.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_RANDOMIZE")));
                 if(Boolean.parseBoolean(dataMap.getString("KEY_RANDOMIZE"))){
 
-
-                    checkboxes.setVisibility(VISIBLE);
-                    chooseColors.setVisibility(VISIBLE);
                 }else{
-                    checkboxes.setVisibility(View.GONE);
-                    chooseColors.setVisibility(View.GONE);
+
                 }
             }if (dataMap.containsKey("KEY_TIME_INTERVAL")) {
 
@@ -331,17 +335,17 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
             }if(dataMap.containsKey("KEY_CHECK_RED")){
                 red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_RED")));
             }if(dataMap.containsKey("KEY_CHECK_YELLOW")) {
-                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_YELLOW")));
+                yellow.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_YELLOW")));
             }if(dataMap.containsKey("KEY_CHECK_BLUE")) {
-                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_BLUE")));
+                blue.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_BLUE")));
             }if(dataMap.containsKey("KEY_CHECK_GREEN")) {
-                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_GREEN")));
+                green.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_GREEN")));
             }if(dataMap.containsKey("KEY_CHECK_MAGENTA")) {
-                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_MAGENTA")));
+                magenta.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_MAGENTA")));
             }if(dataMap.containsKey("KEY_CHECK_WHITE")) {
-                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_WHITE")));
+                white.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_WHITE")));
             }if(dataMap.containsKey("KEY_CHECK_CYAN")) {
-                red.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_CYAN")));
+                cyan.setChecked(Boolean.parseBoolean(dataMap.getString("KEY_CHECK_CYAN")));
             }
 
         }
@@ -350,7 +354,7 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
 
     @Override
     public void onItemSelected(AdapterView<?> view, View child, int position, long id) {
-        if(justOpened)
+        if(spinnercalled++<spinnerCount)
             return;
 
         String s;
@@ -386,8 +390,21 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
                 break;
         }
 
-        PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
+
+        putDataRequest = putDataMapRequest.asPutDataRequest();
         Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
+
+        try {
+            Log.d(TAG,view.toString());
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_RANDOMIZE","null"));
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_CHECK_MAGENTA","null"));
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_TIME_INTERVAL","null"));
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_HANDS","null"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+
     }
 
     @Override
@@ -397,19 +414,14 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        if(justOpened)
-            return;
+
 
         String s;
 
         if(buttonView.getId() == R.id.random_accent_switch){
             if(isChecked){
-                checkboxes.setVisibility(VISIBLE);
-                chooseColors.setVisibility(VISIBLE);
                 putDataMapRequest.getDataMap().putString("KEY_RANDOMIZE","true");
             }else{
-                checkboxes.setVisibility(View.GONE);
-                chooseColors.setVisibility(View.GONE);
                 putDataMapRequest.getDataMap().putString("KEY_RANDOMIZE","false");
             }
         }else{
@@ -446,7 +458,16 @@ public class WatchFaceConfigurationActivity extends AppCompatActivity implements
         }
 
 
-        PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
+        putDataRequest = putDataMapRequest.asPutDataRequest();
         Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
+        try {
+            Log.d(TAG,buttonView.toString());
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_RANDOMIZE","null"));
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_CHECK_MAGENTA","null"));
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_TIME_INTERVAL","null"));
+            Log.d(TAG,putDataMapRequest.getDataMap().getString("KEY_HANDS","null"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

@@ -33,6 +33,8 @@ import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataItemBuffer;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
 import java.io.Console;
@@ -67,6 +69,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
     private class Engine extends CanvasWatchFaceService.Engine implements GoogleApiClient.ConnectionCallbacks,
     GoogleApiClient.OnConnectionFailedListener{
         private GoogleApiClient googleApiClient;//The main entry point for Google Play services integration.
+        private PutDataMapRequest putDataMapRequest;
 
         private String TAG="Watch Face";//Used for debugging
 
@@ -276,16 +279,35 @@ public class WatchFaceService extends CanvasWatchFaceService{
                     colors.add(Color.CYAN);
 
 
-                if(!colors.isEmpty()){
-                    int newColor = colors.get(ThreadLocalRandom.current().nextInt(colors.size()));
-                    while(newColor!=accentPaint.getColor()){
-                        
 
 
+
+                colors.remove(((Object) accentPaint.getColor()));
+                if(!colors.isEmpty()) {
+                    accentPaint.setColor(colors.get(ThreadLocalRandom.current().nextInt(colors.size())));
+                    PutDataMapRequest putDataMapRequest=PutDataMapRequest.create("/nail_and_gear_config");
+                    String c;
+                    switch (accentPaint.getColor()){
+                        case Color.BLUE:c="Blue";break;
+                        case Color.RED:c="Red";break;
+                        case Color.WHITE:c="White";break;
+                        case Color.CYAN:c="Cyan";break;
+                        case Color.YELLOW:c="Yellow";break;
+                        case Color.MAGENTA:c="Magenta";break;
+                        case Color.GREEN:c="Green";break;
+                        default: c = "WTF?";
                     }
+
+
+
+                    putDataMapRequest.getDataMap().putString("KEY_ACCENT_COLOR",c);
+                    PutDataRequest putDataRequest = putDataMapRequest.asPutDataRequest();
+                    Wearable.DataApi.putDataItem(googleApiClient,putDataRequest);
+
                 }
+
                 colors.clear();
-                nextChange.setTime(System.currentTimeMillis()/60000 + timeInterval);
+                nextChange.setTime((System.currentTimeMillis()/60000 + timeInterval)*60000);
             }
 
 
@@ -523,6 +545,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
             //getDataItems Retrieves all data items from the Android Wear network.
             //setResultCallback sets the function to be called when the Pending Result is retrieved
 
+            putDataMapRequest = PutDataMapRequest.create("/nail_and_gear_config");
             Wearable.DataApi.getDataItems(googleApiClient).setResultCallback(onConnectedResultCallback);
 
 
@@ -679,7 +702,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                             break;
 
                     }
-                    nextChange.setTime((System.currentTimeMillis()/60000)+(timeInterval-(System.currentTimeMillis()/60000)%timeInterval));
+                    nextChange.setTime(((System.currentTimeMillis()/60000)+(timeInterval-(System.currentTimeMillis()/60000)%timeInterval))*60000);
                 }
             }
         }
