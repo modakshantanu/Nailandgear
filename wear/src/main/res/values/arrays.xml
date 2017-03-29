@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="colors_array">
+        <item name="red">Red</item>
+        <item name="green">Green</item>
+        <item name="cyan">Cyan</item>
+        <item name="magenta">Magenta</item>
+        <item name="blue">Blue</item>
+        <item name="yellow">Yellow</item>
+        <item name="white">White</item>
+    </string-array>
+    <string-array name="amb_int_matrix">
+        <item name="none">Don\'t Display</item>
+        <item name="amb">Ambient Only</item>
+        <item name="int">Interactive Only</item>
+        <item name="both">Both Modes</item>
+    </string-array>
+    <string-array name="hands_display">
+        <item name="hm">Hour and Minute</item>
+        <item name="h">Hour Only</item>
+        <item name="m">Minute Only</item>
+        <item name="none">None</item>
+    </string-array>
+    <string-array name="time_formats">
+        <item name="HH  mm">24 hr time</item>
+        <item name="hh  mm">12 hr time</item>
+    </string-array>
+    <string-array name="time_intervals">
+        <item name="minute">1 min</item>
+        <item name="15 mins">15 mins</item>
+        <item name="1 hour">1 hour</item>
+        <item name="6 hours">6 hours</item>
+        <item name="1 day">24 hours</item>
+    </string-array>
+</resources>

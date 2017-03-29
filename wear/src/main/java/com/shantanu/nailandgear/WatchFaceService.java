@@ -358,8 +358,7 @@ public class WatchFaceService extends CanvasWatchFaceService{
                 HH_SCALE = 0.28f;
                 MH_SCALE = 0.12f;//y-coord of top of minute hand
                 HM_SCALE = 0.07f;//y-coord of circle
-                DAY_POS = 0.30f;//y-coord of text
-                DATE_POS = 0.60f;
+                DAY_POS = 0.35f;//y-coord of text
                 BAT_POS = 0.60f;
             }else{
                 NG_SCALE = 1.27f;
